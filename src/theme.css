@@ -1,0 +1,6 @@
+/* https://joyofcode.xyz/using-pico-css-with-svelte
+
+[data-theme=light],
+:root:not([data-theme=dark]){
+    --primary: #f4511e;
+} */

@@ -32,6 +32,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@picocss/pico": "^1.5.7",
 		"@unocss/core": "^0.50.1"
 	}
 }
