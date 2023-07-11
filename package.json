@@ -1,5 +1,5 @@
 {
-	"name": "unocss-template",
+	"name": "spy-game",
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
@@ -33,6 +33,9 @@
 	"type": "module",
 	"dependencies": {
 		"@picocss/pico": "^1.5.7",
-		"@unocss/core": "^0.50.1"
+		"@unocss/core": "^0.50.1",
+		"p5": "^1.6.0",
+		"p5-svelte": "^3.1.2",
+		"p5play": "^3.8.36"
 	}
 }
