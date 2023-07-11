@@ -34,6 +34,7 @@
 	"dependencies": {
 		"@picocss/pico": "^1.5.7",
 		"@unocss/core": "^0.50.1",
+		"mathjs": "^11.8.2",
 		"p5": "^1.6.0",
 		"p5-svelte": "^3.1.2",
 		"p5play": "^3.8.36"
