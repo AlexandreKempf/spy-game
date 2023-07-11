@@ -1,196 +1,136 @@
 <script>
 	import P5 from 'p5-svelte';
+	import * as math from 'mathjs';
 
 	let background;
 	let foreground;
-	let walkable;
-	let player = {
-		x: 300,
-		y: 900,
-		next_move: { x: 0, y: 0 },
-		img: [],
-		gif_frame: 0,
-		gif_update: 0.2,
-		direction: 'down',
-		speed: 3,
-		state: 'idle'
-	};
-	let next_move_length = 0;
+	let walkableMap;
+	let player;
 
-	const is_walkable = (image, positions_x, positions_y) => {
-		let indexes = positions_x.map((value, idx) => (value + positions_y[idx] * image.width) * 4);
-		return indexes.every((value) => image.pixels[value] !== 0);
-	};
+	let position = [300, 200];
+	let speed = 8;
+	let animationInformation = ['idle', 'down', 0];
+	let animationTable = { idle: 0, walk: 1152, right: 0, up: 288, left: 576, down: 864 };
+
+	function local_display(
+		p5,
+		background,
+		foreground,
+		player,
+		position,
+		oldPosition,
+		animationInformation
+	) {
+		p5.image(
+			background,
+			oldPosition[0],
+			oldPosition[1],
+			48,
+			96,
+			oldPosition[0],
+			oldPosition[1],
+			48,
+			96
+		);
+		animationInformation[0] =
+			vectorNorm(math.subtract(position, oldPosition)) == 0 ? 'idle' : 'walk';
+
+		let displacementVector = math.subtract(position, oldPosition);
+		if (displacementVector[0] > 0) animationInformation[1] = 'right';
+		if (displacementVector[0] < 0) animationInformation[1] = 'left';
+		if (displacementVector[1] > 0) animationInformation[1] = 'down';
+		if (displacementVector[1] < 0) animationInformation[1] = 'up';
+
+		animationInformation[2] = (animationInformation[2] + 1) % 6;
+
+		let animationScore =
+			animationTable[animationInformation[0]] +
+			animationTable[animationInformation[1]] +
+			48 * animationInformation[2];
+
+		console.log(animationInformation);
+		console.log(animationScore);
+
+		p5.image(player, position[0], position[1], 48, 96, animationScore, 0, 48, 96);
+		p5.image(foreground, position[0], position[1], 48, 96, position[0], position[1], 48, 96);
+	}
+
+	function vectorNorm(vector) {
+		return math.sqrt(math.sum(math.map(vector, math.square)));
+	}
+
+	function handleWalls(walkableMap, player, position, derivedPosition) {
+		let keypoints = [
+			math.add(position, [10, 96 - 26]),
+			math.add(position, [48 - 10, 96 - 26]),
+			math.add(position, [48 - 10, 96]),
+			math.add(position, [10, 96])
+		];
+
+		let stopHorizontal = math
+			.add(keypoints, [derivedPosition[0], 0])
+			.map((pos) => (pos[0] + pos[1] * walkableMap.width) * 4)
+			.some((index) => walkableMap.pixels[index] == 0);
+		let stopVertical = math
+			.add(keypoints, [0, derivedPosition[1]])
+			.map((pos) => (pos[0] + pos[1] * walkableMap.width) * 4)
+			.some((index) => walkableMap.pixels[index] == 0);
+		let stopBoth = math
+			.add(keypoints, derivedPosition)
+			.map((pos) => (pos[0] + pos[1] * walkableMap.width) * 4)
+			.some((index) => walkableMap.pixels[index] == 0);
+
+		if (stopHorizontal) derivedPosition[0] = 0;
+		if (stopVertical) derivedPosition[1] = 0;
+		if (stopBoth && !stopVertical) derivedPosition[0] = 0;
+		if (stopBoth && !stopHorizontal) derivedPosition[1] = 0;
+		return derivedPosition;
+	}
 
 	const sketch = (p5) => {
 		p5.preload = () => {
 			background = p5.loadImage('background.webp');
 			foreground = p5.loadImage('items_foreground.webp');
-			walkable = p5.loadImage('walkable.webp');
-			player.imgs = {
-				idle: {
-					down: [
-						p5.loadImage('player/idle/down_0.webp'),
-						p5.loadImage('player/idle/down_1.webp'),
-						p5.loadImage('player/idle/down_2.webp'),
-						p5.loadImage('player/idle/down_3.webp'),
-						p5.loadImage('player/idle/down_4.webp'),
-						p5.loadImage('player/idle/down_5.webp')
-					],
-					up: [
-						p5.loadImage('player/idle/up_0.webp'),
-						p5.loadImage('player/idle/up_1.webp'),
-						p5.loadImage('player/idle/up_2.webp'),
-						p5.loadImage('player/idle/up_3.webp'),
-						p5.loadImage('player/idle/up_4.webp'),
-						p5.loadImage('player/idle/up_5.webp')
-					],
-					right: [
-						p5.loadImage('player/idle/right_0.webp'),
-						p5.loadImage('player/idle/right_1.webp'),
-						p5.loadImage('player/idle/right_2.webp'),
-						p5.loadImage('player/idle/right_3.webp'),
-						p5.loadImage('player/idle/right_4.webp'),
-						p5.loadImage('player/idle/right_5.webp')
-					],
-					left: [
-						p5.loadImage('player/idle/left_0.webp'),
-						p5.loadImage('player/idle/left_1.webp'),
-						p5.loadImage('player/idle/left_2.webp'),
-						p5.loadImage('player/idle/left_3.webp'),
-						p5.loadImage('player/idle/left_4.webp'),
-						p5.loadImage('player/idle/left_5.webp')
-					]
-				},
-				walk: {
-					down: [
-						p5.loadImage('player/walk/down_0.webp'),
-						p5.loadImage('player/walk/down_1.webp'),
-						p5.loadImage('player/walk/down_2.webp'),
-						p5.loadImage('player/walk/down_3.webp'),
-						p5.loadImage('player/walk/down_4.webp'),
-						p5.loadImage('player/walk/down_5.webp')
-					],
-					up: [
-						p5.loadImage('player/walk/up_0.webp'),
-						p5.loadImage('player/walk/up_1.webp'),
-						p5.loadImage('player/walk/up_2.webp'),
-						p5.loadImage('player/walk/up_3.webp'),
-						p5.loadImage('player/walk/up_4.webp'),
-						p5.loadImage('player/walk/up_5.webp')
-					],
-					right: [
-						p5.loadImage('player/walk/right_0.webp'),
-						p5.loadImage('player/walk/right_1.webp'),
-						p5.loadImage('player/walk/right_2.webp'),
-						p5.loadImage('player/walk/right_3.webp'),
-						p5.loadImage('player/walk/right_4.webp'),
-						p5.loadImage('player/walk/right_5.webp')
-					],
-					left: [
-						p5.loadImage('player/walk/left_0.webp'),
-						p5.loadImage('player/walk/left_1.webp'),
-						p5.loadImage('player/walk/left_2.webp'),
-						p5.loadImage('player/walk/left_3.webp'),
-						p5.loadImage('player/walk/left_4.webp'),
-						p5.loadImage('player/walk/left_5.webp')
-					]
-				}
-			};
+			player = p5.loadImage('player.webp');
+			walkableMap = p5.loadImage('walkable.webp');
 		};
+
 		p5.setup = () => {
-			p5.createCanvas(2544, 1584);
-			walkable.loadPixels();
+			walkableMap.loadPixels();
+			p5.createCanvas(background.width, background.height);
+			p5.image(background, 0, 0);
+			p5.image(player, position[0], position[1], 48, 96, 0, 0, 48, 96);
+			p5.image(foreground, 0, 0);
+			p5.frameRate(12);
 		};
 
 		p5.draw = () => {
-			p5.background(255);
-			p5.image(background, 0, 0);
-			let image_player =
-				player.imgs[player.state][player.direction][Math.ceil(player.gif_frame) % 6];
-			p5.image(image_player, player.x, player.y);
-			player.next_move = { x: 0, y: 0 };
-			if (p5.keyIsDown(p5.LEFT_ARROW)) {
-				player.next_move.x = -1;
-				player.direction = 'left';
-			}
-			if (p5.keyIsDown(p5.RIGHT_ARROW)) {
-				player.next_move.x = 1;
-				player.direction = 'right';
-			}
-			if (p5.keyIsDown(p5.UP_ARROW)) {
-				player.next_move.y = -1;
-				player.direction = 'up';
-			}
-			if (p5.keyIsDown(p5.DOWN_ARROW)) {
-				player.next_move.y = 1;
-				player.direction = 'down';
-			}
-			// continue the animation
-			player.gif_frame += player.gif_update;
-			// move player
-			next_move_length = Math.sqrt(player.next_move.x ** 2 + player.next_move.y ** 2);
-			player.state = next_move_length ? 'walk' : 'idle';
-			let next_position_x = next_move_length
-				? Math.ceil((player.speed * player.next_move.x) / next_move_length)
-				: 0;
-			let next_position_y = next_move_length
-				? Math.ceil((player.speed * player.next_move.y) / next_move_length)
-				: 0;
+			let oldPosition = position;
 
-			let next_move_allowed = is_walkable(
-				walkable,
-				[
-					player.x + next_position_x + 5,
-					player.x + next_position_x + 5,
-					player.x + next_position_x + 43,
-					player.x + next_position_x + 43
-				],
-				[
-					player.y + next_position_y + image_player.height,
-					player.y + next_position_y + image_player.height - 43,
-					player.y + next_position_y + image_player.height,
-					player.y + next_position_y + image_player.height - 43
-				]
-			);
-			let next_move_allowed_x = is_walkable(
-				walkable,
-				[
-					player.x + next_position_x + 5,
-					player.x + next_position_x + 5,
-					player.x + next_position_x + 43,
-					player.x + next_position_x + 43
-				],
-				[
-					player.y + image_player.height,
-					player.y + image_player.height - 43,
-					player.y + image_player.height,
-					player.y + image_player.height - 43
-				]
-			);
-			let next_move_allowed_y = is_walkable(
-				walkable,
-				[player.x + 5, player.x + 5, player.x + 43, player.x + 43],
-				[
-					player.y + next_position_y + image_player.height,
-					player.y + next_position_y + image_player.height - 43,
-					player.y + next_position_y + image_player.height,
-					player.y + next_position_y + image_player.height - 43
-				]
-			);
-			p5.circle(player.x + next_position_x + 5, player.y + image_player.height, 5, 5);
-			p5.circle(player.x + next_position_x + 5, player.y + image_player.height - 43, 5, 5);
-			p5.circle(player.x + next_position_x + 43, player.y + image_player.height, 5, 5);
-			p5.circle(player.x + next_position_x + 43, player.y + image_player.height - 43, 5, 5);
-			if (next_move_allowed) {
-				player.x += next_position_x;
-				player.y += next_position_y;
-			} else if (next_move_allowed_x) {
-				player.x += next_position_x;
-			} else if (next_move_allowed_y) {
-				player.y += next_position_y;
+			// displacement
+			let derivedPosition = [0, 0];
+			if (p5.keyIsDown(p5.LEFT_ARROW)) derivedPosition[0] -= 1;
+			if (p5.keyIsDown(p5.RIGHT_ARROW)) derivedPosition[0] += 1;
+			if (p5.keyIsDown(p5.UP_ARROW)) derivedPosition[1] -= 1;
+			if (p5.keyIsDown(p5.DOWN_ARROW)) derivedPosition[1] += 1;
+			let derivedPositionNorm = vectorNorm(derivedPosition);
+			if (derivedPositionNorm != 0) {
+				derivedPosition = math.multiply(math.divide(derivedPosition, derivedPositionNorm), speed);
+				derivedPosition = math.round(derivedPosition);
+				derivedPosition = handleWalls(walkableMap, player, position, derivedPosition);
+				position = math.add(position, derivedPosition);
 			}
-			p5.image(foreground, 0, 0);
+
+			// display
+			local_display(
+				p5,
+				background,
+				foreground,
+				player,
+				position,
+				oldPosition,
+				animationInformation
+			);
 		};
 	};
 </script>
