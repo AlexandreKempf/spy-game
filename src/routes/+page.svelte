@@ -48,11 +48,18 @@
 			animationTable[animationInformation[1]] +
 			48 * animationInformation[2];
 
-		console.log(animationInformation);
-		console.log(animationScore);
-
 		p5.image(player, position[0], position[1], 48, 96, animationScore, 0, 48, 96);
-		p5.image(foreground, position[0], position[1], 48, 96, position[0], position[1], 48, 96);
+		p5.image(
+			foreground,
+			math.min(position[0], oldPosition[0]),
+			math.min(position[1], oldPosition[1]),
+			60,
+			110,
+			math.min(position[0], oldPosition[0]),
+			math.min(position[1], oldPosition[1]),
+			60,
+			110
+		);
 	}
 
 	function vectorNorm(vector) {
@@ -61,10 +68,10 @@
 
 	function handleWalls(walkableMap, player, position, derivedPosition) {
 		let keypoints = [
-			math.add(position, [10, 96 - 26]),
-			math.add(position, [48 - 10, 96 - 26]),
-			math.add(position, [48 - 10, 96]),
-			math.add(position, [10, 96])
+			math.add(position, [10, 96 - 20]),
+			math.add(position, [48 - 10, 96 - 20]),
+			math.add(position, [48 - 10, 96 - 2]),
+			math.add(position, [10, 96 - 2])
 		];
 
 		let stopHorizontal = math
@@ -90,7 +97,7 @@
 	const sketch = (p5) => {
 		p5.preload = () => {
 			background = p5.loadImage('background.webp');
-			foreground = p5.loadImage('items_foreground.webp');
+			foreground = p5.loadImage('foreground.webp');
 			player = p5.loadImage('player.webp');
 			walkableMap = p5.loadImage('walkable.webp');
 		};
