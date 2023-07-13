@@ -1,32 +1,40 @@
-<script>
+<script lang="ts">
 	import P5 from 'p5-svelte';
+	import type * as p5Type from 'p5';
 	import * as math from 'mathjs';
 
-	export let levelName;
-	export let playerName;
+	export let levelName: string;
+	export let playerName: string;
 
-	let background;
-	let foreground;
-	let walkableMap;
-	let player;
+	let background: p5Type.Image;
+	let foreground: p5Type.Image;
+	let walkableMap: p5Type.Image;
+	let player: p5Type.Image;
 
 	let width = 500;
 	let height = 500;
 	let FPS = 15;
 
-	let position = [1080, 1220];
+	let position: [number, number] = [1080, 1220];
 	let speed = 8;
-	let animationInformation = ['idle', 'down', 0];
-	let animationTable = { idle: 0, walk: 1152, right: 0, up: 288, left: 576, down: 864 };
+	let animationInformation: [string, string, number] = ['idle', 'down', 0];
+	let animationTable: { [key: string]: number } = {
+		idle: 0,
+		walk: 1152,
+		right: 0,
+		up: 288,
+		left: 576,
+		down: 864
+	};
 
 	function local_display(
-		p5,
-		background,
-		foreground,
-		player,
-		position,
-		oldPosition,
-		animationInformation
+		p5: p5Type,
+		background: p5Type.Image,
+		foreground: p5Type.Image,
+		player: p5Type.Image,
+		position: [number, number],
+		oldPosition: [number, number],
+		animationInformation: [string, string, number]
 	) {
 		p5.background('white');
 		p5.image(
@@ -80,30 +88,32 @@
 		);
 	}
 
-	function vectorNorm(vector) {
+	function vectorNorm(vector: number[]) {
 		return math.sqrt(math.sum(math.map(vector, math.square)));
 	}
 
-	function handleWalls(walkableMap, player, position, derivedPosition) {
-		let keypoints = [
+	function handleWalls(
+		walkableMap: p5Type.Image,
+		player: p5Type.Image,
+		position: [number, number],
+		derivedPosition: [number, number]
+	) {
+		let keypoints: [number, number][] = [
 			math.add(position, [10, 96 - 28]),
 			math.add(position, [48 - 10, 96 - 28]),
 			math.add(position, [48 - 10, 96 - 2]),
 			math.add(position, [10, 96 - 2])
 		];
 
-		let stopHorizontal = math
-			.add(keypoints, [derivedPosition[0], 0])
-			.map((pos) => (pos[0] + pos[1] * walkableMap.width) * 4)
-			.some((index) => walkableMap.pixels[index] == 0);
-		let stopVertical = math
-			.add(keypoints, [0, derivedPosition[1]])
-			.map((pos) => (pos[0] + pos[1] * walkableMap.width) * 4)
-			.some((index) => walkableMap.pixels[index] == 0);
-		let stopBoth = math
-			.add(keypoints, derivedPosition)
-			.map((pos) => (pos[0] + pos[1] * walkableMap.width) * 4)
-			.some((index) => walkableMap.pixels[index] == 0);
+		let stopHorizontal = (math.add(keypoints, [derivedPosition[0], 0]) as [number, number][])
+			.map((pos: [number, number]) => (pos[0] + pos[1] * walkableMap.width) * 4)
+			.some((index: number) => walkableMap.pixels[index] == 0);
+		let stopVertical = (math.add(keypoints, [0, derivedPosition[1]]) as [number, number][])
+			.map((pos: [number, number]) => (pos[0] + pos[1] * walkableMap.width) * 4)
+			.some((index: number) => walkableMap.pixels[index] == 0);
+		let stopBoth = (math.add(keypoints, derivedPosition) as [number, number][])
+			.map((pos: [number, number]) => (pos[0] + pos[1] * walkableMap.width) * 4)
+			.some((index: number) => walkableMap.pixels[index] == 0);
 
 		if (stopHorizontal) derivedPosition[0] = 0;
 		if (stopVertical) derivedPosition[1] = 0;
@@ -112,7 +122,7 @@
 		return derivedPosition;
 	}
 
-	const sketch = (p5) => {
+	const sketch = (p5: p5Type) => {
 		p5.preload = () => {
 			background = p5.loadImage(`levels/${levelName}/background.webp`);
 			foreground = p5.loadImage(`levels/${levelName}/foreground.webp`);
@@ -123,9 +133,6 @@
 		p5.setup = () => {
 			walkableMap.loadPixels();
 			p5.createCanvas(width, height);
-			// p5.image(background, 0, 0);
-			p5.image(player, position[0], position[1], 48, 96, 0, 0, 48, 96);
-			// p5.image(foreground, 0, 0);
 			p5.frameRate(FPS);
 		};
 
@@ -133,14 +140,17 @@
 			let oldPosition = position;
 
 			// displacement
-			let derivedPosition = [0, 0];
+			let derivedPosition: [number, number] = [0, 0];
 			if (p5.keyIsDown(p5.LEFT_ARROW)) derivedPosition[0] -= 1;
 			if (p5.keyIsDown(p5.RIGHT_ARROW)) derivedPosition[0] += 1;
 			if (p5.keyIsDown(p5.UP_ARROW)) derivedPosition[1] -= 1;
 			if (p5.keyIsDown(p5.DOWN_ARROW)) derivedPosition[1] += 1;
 			let derivedPositionNorm = vectorNorm(derivedPosition);
 			if (derivedPositionNorm != 0) {
-				derivedPosition = math.multiply(math.divide(derivedPosition, derivedPositionNorm), speed);
+				derivedPosition = math.multiply(
+					math.divide(derivedPosition, derivedPositionNorm),
+					speed
+				) as [number, number];
 				derivedPosition = math.round(derivedPosition);
 				derivedPosition = handleWalls(walkableMap, player, position, derivedPosition);
 				position = math.add(position, derivedPosition);
