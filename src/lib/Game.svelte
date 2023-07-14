@@ -18,10 +18,12 @@
 	let playerWidth = 48;
 	let playerHeight = 96;
 	let FPS = 15;
+	let maxSpeed = 8;
 
 	let position: [number, number] = [1105, 1300];
-	let speed = 8;
-	let animationInformation: [string, string, number] = ['idle', 'down', 0];
+	let inputs: [boolean, boolean, boolean, boolean] = [false, false, false, false];
+	let orientation: string = 'down';
+	let cycle: number = 0;
 	let animationTable: { [key: string]: number } = {
 		idle: 0,
 		walk: 1152,
@@ -40,8 +42,9 @@
 		foreground: p5Type.Image,
 		player: p5Type.Image,
 		position: [number, number],
-		oldPosition: [number, number],
-		animationInformation: [string, string, number]
+		motion: [number, number],
+		orientation: string,
+		cycle: number
 	) {
 		p5.background('white');
 		p5.image(
@@ -55,21 +58,11 @@
 			width,
 			height
 		);
-		animationInformation[0] =
-			vectorNorm(math.subtract(position, oldPosition)) == 0 ? 'idle' : 'walk';
-
-		let displacementVector = math.subtract(position, oldPosition);
-		if (displacementVector[0] > 0) animationInformation[1] = 'right';
-		if (displacementVector[0] < 0) animationInformation[1] = 'left';
-		if (displacementVector[1] > 0) animationInformation[1] = 'down';
-		if (displacementVector[1] < 0) animationInformation[1] = 'up';
-
-		animationInformation[2] = (animationInformation[2] + 1) % 6;
-
+		let speed = vectorNorm(motion) as number;
 		let animationScore =
-			animationTable[animationInformation[0]] +
-			animationTable[animationInformation[1]] +
-			playerWidth * animationInformation[2];
+			animationTable[speed == 0 ? 'idle' : 'walk'] +
+			animationTable[orientation] +
+			playerWidth * cycle;
 
 		p5.image(
 			player,
@@ -99,6 +92,10 @@
 		return math.sqrt(math.sum(math.map(vector, math.square)));
 	}
 
+	function getIndex(position: [number, number], map: p5Type.Image): number {
+		return (position[0] + position[1] * map.width) * 4;
+	}
+
 	function handleWalls(
 		walkableMap: p5Type.Image,
 		player: p5Type.Image,
@@ -113,13 +110,13 @@
 		];
 
 		let stopHorizontal = (math.add(keypoints, [derivedPosition[0], 0]) as [number, number][])
-			.map((pos: [number, number]) => (pos[0] + pos[1] * walkableMap.width) * 4)
+			.map((pos: [number, number]) => getIndex(pos, walkableMap))
 			.some((index: number) => walkableMap.pixels[index] == 0);
 		let stopVertical = (math.add(keypoints, [0, derivedPosition[1]]) as [number, number][])
-			.map((pos: [number, number]) => (pos[0] + pos[1] * walkableMap.width) * 4)
+			.map((pos: [number, number]) => getIndex(pos, walkableMap))
 			.some((index: number) => walkableMap.pixels[index] == 0);
 		let stopBoth = (math.add(keypoints, derivedPosition) as [number, number][])
-			.map((pos: [number, number]) => (pos[0] + pos[1] * walkableMap.width) * 4)
+			.map((pos: [number, number]) => getIndex(pos, walkableMap))
 			.some((index: number) => walkableMap.pixels[index] == 0);
 
 		if (stopHorizontal) derivedPosition[0] = 0;
@@ -134,8 +131,8 @@
 		position: [number, number],
 		color: [number, number, number, number]
 	) {
-		let keypoint = math.add(position, [0, 40]);
-		let index = (keypoint[0] + keypoint[1] * logicMap.width) * 4;
+		let keypoint = math.add(position, [0, 40]) as [number, number];
+		let index = getIndex(keypoint, logicMap);
 		return (
 			math.abs(logicMap.pixels[index] - color[0]) <= 2 &&
 			math.abs(logicMap.pixels[index + 1] - color[1]) <= 2 &&
@@ -161,25 +158,48 @@
 		};
 
 		p5.draw = () => {
-			let oldPosition = position;
+			let oldInputs = inputs;
+			let motion: [number, number] = [0, 0];
+			inputs = [false, false, false, false];
+			let defaultOrientation: string = orientation;
+			let getDefault: boolean = false;
+			if (p5.keyIsDown(p5.LEFT_ARROW)) {
+				motion[0] -= 1;
+				inputs[0] = true;
+				defaultOrientation = 'left';
+				if (!oldInputs[0]) orientation = 'left';
+			} else if (oldInputs[0]) getDefault = true;
+			if (p5.keyIsDown(p5.RIGHT_ARROW)) {
+				motion[0] += 1;
+				inputs[1] = true;
+				defaultOrientation = 'right';
+				if (!oldInputs[1]) orientation = 'right';
+			} else if (oldInputs[1]) getDefault = true;
+			if (p5.keyIsDown(p5.UP_ARROW)) {
+				motion[1] -= 1;
+				inputs[2] = true;
+				defaultOrientation = 'up';
+				if (!oldInputs[2]) orientation = 'up';
+			} else if (oldInputs[2]) getDefault = true;
+			if (p5.keyIsDown(p5.DOWN_ARROW)) {
+				motion[1] += 1;
+				inputs[3] = true;
+				defaultOrientation = 'down';
+				if (!oldInputs[3]) orientation = 'down';
+			} else if (oldInputs[3]) getDefault = true;
+			if (getDefault) orientation = defaultOrientation;
 
-			// displacement
-			let derivedPosition: [number, number] = [0, 0];
-			if (p5.keyIsDown(p5.LEFT_ARROW)) derivedPosition[0] -= 1;
-			if (p5.keyIsDown(p5.RIGHT_ARROW)) derivedPosition[0] += 1;
-			if (p5.keyIsDown(p5.UP_ARROW)) derivedPosition[1] -= 1;
-			if (p5.keyIsDown(p5.DOWN_ARROW)) derivedPosition[1] += 1;
-			let derivedPositionNorm = vectorNorm(derivedPosition);
+			let derivedPositionNorm = vectorNorm(motion);
 			if (derivedPositionNorm != 0) {
-				derivedPosition = math.multiply(
-					math.divide(derivedPosition, derivedPositionNorm),
-					speed
-				) as [number, number];
-				derivedPosition = math.round(derivedPosition);
-				derivedPosition = handleWalls(walkableMap, player, position, derivedPosition);
-				position = math.add(position, derivedPosition);
+				motion = math.multiply(math.divide(motion, derivedPositionNorm), maxSpeed) as [
+					number,
+					number
+				];
+				motion = math.round(motion);
+				motion = handleWalls(walkableMap, player, position, motion);
+				position = math.add(position, motion);
 			}
-
+			console.log(motion);
 			// logic
 			function updateStep(step: boolean, stepNumber: number, stepsAchieved: Array<boolean>) {
 				let alreadyAchieved = step;
@@ -192,7 +212,7 @@
 				]);
 				return alreadyAchieved || (previousStepIsAchieved && playerPositionIsGood);
 			}
-			if (vectorNorm(derivedPosition) == 0 && p5.keyIsDown(88))
+			if (vectorNorm(motion) == 0 && p5.keyIsDown(88))
 				stepsAchieved = stepsAchieved.map((step, index, array) => updateStep(step, index, array));
 			let indexLastAcheivedStep = stepsAchieved.lastIndexOf(true);
 			gameState = indexLastAcheivedStep === -1 ? gameState : stepsText[indexLastAcheivedStep];
@@ -200,16 +220,9 @@
 				gameState = 'Victory';
 			}
 
+			cycle = (cycle + 1) % 6;
 			// display
-			local_display(
-				p5,
-				background,
-				foreground,
-				player,
-				position,
-				oldPosition,
-				animationInformation
-			);
+			local_display(p5, background, foreground, player, position, motion, orientation, cycle);
 		};
 	};
 </script>
