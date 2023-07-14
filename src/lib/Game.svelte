@@ -5,12 +5,13 @@
 
 	export let levelName: string;
 	export let playerName: string;
-	// export let lightOn;
+	export let lightOn: boolean;
 
 	let background: p5Type.Image;
 	let foreground: p5Type.Image;
 	let walkableMap: p5Type.Image;
 	let logicMap: p5Type.Image;
+	let darkness: p5Type.Image;
 	let player: p5Type.Image;
 
 	let width = 500;
@@ -20,7 +21,6 @@
 	let FPS = 15;
 	let maxSpeed = 8;
 
-	let position: [number, number] = [1105, 1300];
 	let inputs: [boolean, boolean, boolean, boolean] = [false, false, false, false];
 	let orientation: string = 'down';
 	let cycle: number = 0;
@@ -32,8 +32,11 @@
 		left: 576,
 		down: 864
 	};
-	let stepsAchieved = [false];
-	let stepsText = ['You stole the object'];
+
+	let position: [number, number];
+	let stepsAchieved: Array<boolean>;
+	let stepsText: Array<string>;
+
 	let gameState = 'Ready to steal';
 
 	function local_display(
@@ -148,6 +151,14 @@
 			player = p5.loadImage(`players/${playerName}.webp`);
 			walkableMap = p5.loadImage(`levels/${levelName}/walkable.webp`);
 			logicMap = p5.loadImage(`levels/${levelName}/logic.webp`);
+			darkness = p5.loadImage(`levels/${levelName}/darkness.webp`);
+			fetch(`levels/${levelName}/level.json`)
+				.then((response) => response.json())
+				.then((json) => {
+					position = json.initialPosition;
+					stepsAchieved = json.stepsAchieved;
+					stepsText = json.stepsText;
+				});
 		};
 
 		p5.setup = () => {
@@ -222,10 +233,23 @@
 			cycle = (cycle + 1) % 6;
 			// display
 			local_display(p5, background, foreground, player, position, motion, orientation, cycle);
+			if (!lightOn)
+				p5.image(
+					darkness,
+					0,
+					0,
+					width,
+					height,
+					math.ceil(position[0] - width / 2),
+					math.ceil(position[1] - height / 2),
+					width,
+					height
+				);
 		};
 	};
 </script>
 
+<h3>{levelName}</h3>
 <p>{gameState}</p>
 <div class="m-0 w-full h-full">
 	<P5 {sketch} />
