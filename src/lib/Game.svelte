@@ -2,6 +2,7 @@
 	import P5 from 'p5-svelte';
 	import type * as p5Type from 'p5';
 	import * as math from 'mathjs';
+	import { base } from '$app/paths';
 
 	export let playerName: string;
 	export let playerColor: [number, number, number, number];
@@ -13,6 +14,7 @@
 	let walkableMap: p5Type.Image;
 	let logicMap: p5Type.Image;
 	let darkness: p5Type.Image;
+	let nightVisionCaches: { [key: string]: p5Type.Image };
 	let player: p5Type.Image;
 	let playerContours: p5Type.Image;
 
@@ -22,6 +24,10 @@
 	let playerHeight = 96;
 	let FPS = 15;
 	let maxSpeed = 8;
+	let nightVisionRange = 200;
+	let visionHalfAngle = math.pi / 4;
+	let visionAngleDecay = visionHalfAngle * 0.1;
+	let visionCircleRange = 40;
 
 	let inputs: [boolean, boolean, boolean, boolean] = [false, false, false, false];
 	let orientation: string = 'down';
@@ -101,6 +107,7 @@
 				width,
 				height
 			);
+			p5.image(nightVisionCaches[orientation], 0, 0);
 			p5.image(
 				playerContours,
 				math.ceil(width / 2) - playerWidth / 2,
@@ -115,8 +122,14 @@
 		}
 	}
 
-	function vectorNorm(vector: number[]) {
-		return math.sqrt(math.sum(math.map(vector, math.square)));
+	function vectorNorm(vector: number[]): number {
+		return math.sqrt(math.sum(math.map(vector, math.square))) as number;
+	}
+
+	function normalize(vector: number[]): number[] {
+		let norm = vectorNorm(vector);
+		if (norm == 0) return vector;
+		return math.divide(vector, norm) as number[];
 	}
 
 	function getIndex(position: [number, number], map: p5Type.Image): number {
@@ -165,6 +178,51 @@
 			math.abs(logicMap.pixels[index + 2] - color[2]) <= 2 &&
 			math.abs(logicMap.pixels[index + 3] - color[3]) <= 2
 		);
+	}
+
+	function getAlpha(transparency: number): number {
+		let minAlpha = 20;
+		return minAlpha + (255 - minAlpha) * (1 - transparency);
+	}
+
+	function extractCache(visionVec: [number, number], lightOn: boolean, p5: p5Type): p5Type.Image {
+		let cache = p5.createImage(width, height);
+		visionVec = normalize(visionVec) as [number, number];
+		let grey = 50;
+		let x: number;
+		let y: number;
+		let index: number;
+		let pixelVec: [number, number];
+		let range: number;
+		let transparency: number;
+		let color: number;
+		for (x = 0; x < width; x++) {
+			for (y = 0; y < height; y++) {
+				index = getIndex([x, y], cache);
+				pixelVec = [x - width / 2, y - height / 2];
+				if (lightOn)
+					pixelVec = math.add(pixelVec, math.multiply(visionVec, 20)) as [number, number];
+				range = vectorNorm(pixelVec);
+				transparency = 0;
+				pixelVec = normalize(pixelVec) as [number, number];
+				if (lightOn) {
+					transparency =
+						0.2 + (0.8 * (pixelVec[0] * visionVec[0] + pixelVec[1] * visionVec[1] + 1)) / 2;
+					color = 255 * (1 - transparency);
+				} else {
+					transparency = math.pow(
+						math.max(0, pixelVec[0] * visionVec[0] + pixelVec[1] * visionVec[1]),
+						2
+					) as number;
+					transparency = transparency * math.max(0, 1 - range / nightVisionRange);
+					transparency = math.max(transparency, 1 - range / visionCircleRange);
+					color = 100 * transparency;
+				}
+				cache.set(x, y, p5.color(color, color, color, getAlpha(transparency)));
+			}
+		}
+		cache.updatePixels();
+		return cache;
 	}
 
 	function extractContour(player: p5Type.Image, p5: p5Type): p5Type.Image {
@@ -216,6 +274,12 @@
 			logicMap.loadPixels();
 			player.loadPixels();
 			playerContours = extractContour(player, p5);
+			nightVisionCaches = {
+				left: extractCache([-1, 0], false, p5),
+				right: extractCache([+1, 0], false, p5),
+				down: extractCache([0, +1], false, p5),
+				up: extractCache([0, -1], false, p5)
+			};
 			p5.createCanvas(width, height);
 			p5.frameRate(FPS);
 		};
