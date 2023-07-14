@@ -5,6 +5,7 @@
 	let playerNames = ['Alex', 'Santa'];
 	let playerName = 'Laurent';
 	let ready = false;
+	let lightOn = true;
 	// $: ready = playerName == 'Santa';
 </script>
 
@@ -15,7 +16,7 @@
 	{/each}
 </select> -->
 
-<!-- <p>{playerName}</p> -->
+<p>{playerName}</p>
 
 <!-- {#if ready} -->
 <Game {playerName} {levelName} />

@@ -5,17 +5,21 @@
 
 	export let levelName: string;
 	export let playerName: string;
+	// export let lightOn;
 
 	let background: p5Type.Image;
 	let foreground: p5Type.Image;
 	let walkableMap: p5Type.Image;
+	let logicMap: p5Type.Image;
 	let player: p5Type.Image;
 
 	let width = 500;
 	let height = 500;
+	let playerWidth = 48;
+	let playerHeight = 96;
 	let FPS = 15;
 
-	let position: [number, number] = [1080, 1220];
+	let position: [number, number] = [1105, 1300];
 	let speed = 8;
 	let animationInformation: [string, string, number] = ['idle', 'down', 0];
 	let animationTable: { [key: string]: number } = {
@@ -26,6 +30,9 @@
 		left: 576,
 		down: 864
 	};
+	let stepsAchieved = [false];
+	let stepsText = ['You stole the object'];
+	let gameState = 'Ready to steal';
 
 	function local_display(
 		p5: p5Type,
@@ -62,18 +69,18 @@
 		let animationScore =
 			animationTable[animationInformation[0]] +
 			animationTable[animationInformation[1]] +
-			48 * animationInformation[2];
+			playerWidth * animationInformation[2];
 
 		p5.image(
 			player,
-			math.ceil(width / 2),
-			math.ceil(height / 2),
-			48,
-			96,
+			math.ceil(width / 2) - playerWidth / 2,
+			math.ceil(height / 2) - playerHeight / 2,
+			playerWidth,
+			playerHeight,
 			animationScore,
 			0,
-			48,
-			96
+			playerWidth,
+			playerHeight
 		);
 		p5.image(
 			foreground,
@@ -99,10 +106,10 @@
 		derivedPosition: [number, number]
 	) {
 		let keypoints: [number, number][] = [
-			math.add(position, [10, 96 - 28]),
-			math.add(position, [48 - 10, 96 - 28]),
-			math.add(position, [48 - 10, 96 - 2]),
-			math.add(position, [10, 96 - 2])
+			math.add(position, [-19, 20]),
+			math.add(position, [19, 20]),
+			math.add(position, [19, 46]),
+			math.add(position, [-19, 46])
 		];
 
 		let stopHorizontal = (math.add(keypoints, [derivedPosition[0], 0]) as [number, number][])
@@ -122,16 +129,33 @@
 		return derivedPosition;
 	}
 
+	function isPlayerInColor(
+		logicMap: p5Type.Image,
+		position: [number, number],
+		color: [number, number, number, number]
+	) {
+		let keypoint = math.add(position, [0, 40]);
+		let index = (keypoint[0] + keypoint[1] * logicMap.width) * 4;
+		return (
+			math.abs(logicMap.pixels[index] - color[0]) <= 2 &&
+			math.abs(logicMap.pixels[index + 1] - color[1]) <= 2 &&
+			math.abs(logicMap.pixels[index + 2] - color[2]) <= 2 &&
+			math.abs(logicMap.pixels[index + 3] - color[3]) <= 2
+		);
+	}
+
 	const sketch = (p5: p5Type) => {
 		p5.preload = () => {
 			background = p5.loadImage(`levels/${levelName}/background.webp`);
 			foreground = p5.loadImage(`levels/${levelName}/foreground.webp`);
 			player = p5.loadImage(`players/${playerName}.webp`);
 			walkableMap = p5.loadImage(`levels/${levelName}/walkable.webp`);
+			logicMap = p5.loadImage(`levels/${levelName}/logic.webp`);
 		};
 
 		p5.setup = () => {
 			walkableMap.loadPixels();
+			logicMap.loadPixels();
 			p5.createCanvas(width, height);
 			p5.frameRate(FPS);
 		};
@@ -156,6 +180,26 @@
 				position = math.add(position, derivedPosition);
 			}
 
+			// logic
+			function updateStep(step: boolean, stepNumber: number, stepsAchieved: Array<boolean>) {
+				let alreadyAchieved = step;
+				let previousStepIsAchieved = stepNumber === 0 || stepsAchieved[stepNumber - 1];
+				let playerPositionIsGood = isPlayerInColor(logicMap, position, [
+					stepNumber * 10,
+					stepNumber * 10,
+					stepNumber * 10,
+					255
+				]);
+				return alreadyAchieved || (previousStepIsAchieved && playerPositionIsGood);
+			}
+			if (vectorNorm(derivedPosition) == 0 && p5.keyIsDown(88))
+				stepsAchieved = stepsAchieved.map((step, index, array) => updateStep(step, index, array));
+			let indexLastAcheivedStep = stepsAchieved.lastIndexOf(true);
+			gameState = indexLastAcheivedStep === -1 ? gameState : stepsText[indexLastAcheivedStep];
+			if (stepsAchieved.every((v) => v) && isPlayerInColor(logicMap, position, [255, 0, 0, 255])) {
+				gameState = 'Victory';
+			}
+
 			// display
 			local_display(
 				p5,
@@ -170,6 +214,7 @@
 	};
 </script>
 
+<p>{gameState}</p>
 <div class="m-0 w-full h-full">
 	<P5 {sketch} />
 </div>
