@@ -3,8 +3,9 @@
 	import type * as p5Type from 'p5';
 	import * as math from 'mathjs';
 
-	export let levelName: string;
 	export let playerName: string;
+	export let playerColor: [number, number, number, number];
+	export let levelName: string;
 	export let lightOn: boolean;
 
 	let background: p5Type.Image;
@@ -13,6 +14,7 @@
 	let logicMap: p5Type.Image;
 	let darkness: p5Type.Image;
 	let player: p5Type.Image;
+	let playerContours: p5Type.Image;
 
 	let width = 500;
 	let height = 500;
@@ -39,17 +41,16 @@
 
 	let gameState = 'Ready to steal';
 
-	function local_display(
+	function display(
 		p5: p5Type,
 		background: p5Type.Image,
 		foreground: p5Type.Image,
 		player: p5Type.Image,
 		position: [number, number],
-		motion: [number, number],
 		orientation: string,
 		cycle: number
 	) {
-		p5.background('white');
+		p5.background(lightOn ? 'white' : 'black');
 		p5.image(
 			background,
 			0,
@@ -61,7 +62,6 @@
 			width,
 			height
 		);
-		let speed = vectorNorm(motion) as number;
 		let animationScore =
 			animationTable[inputs.includes(true) ? 'walk' : 'idle'] +
 			animationTable[orientation] +
@@ -89,6 +89,30 @@
 			width,
 			height
 		);
+		if (!lightOn) {
+			p5.image(
+				darkness,
+				0,
+				0,
+				width,
+				height,
+				math.ceil(position[0] - width / 2),
+				math.ceil(position[1] - height / 2),
+				width,
+				height
+			);
+			p5.image(
+				playerContours,
+				math.ceil(width / 2) - playerWidth / 2,
+				math.ceil(height / 2) - playerHeight / 2,
+				playerWidth,
+				playerHeight,
+				animationScore,
+				0,
+				playerWidth,
+				playerHeight
+			);
+		}
 	}
 
 	function vectorNorm(vector: number[]) {
@@ -101,7 +125,6 @@
 
 	function handleWalls(
 		walkableMap: p5Type.Image,
-		player: p5Type.Image,
 		position: [number, number],
 		derivedPosition: [number, number]
 	) {
@@ -144,6 +167,33 @@
 		);
 	}
 
+	function extractContour(player: p5Type.Image, p5: p5Type): p5Type.Image {
+		let x: number;
+		let y: number;
+		let index: number;
+		let playerContours = p5.createImage(player.width, player.height);
+		for (x = 0; x < player.width; x++) {
+			for (y = 0; y < player.height; y++) {
+				index = getIndex([x, y], player) + 3; // Alpha channel
+				if (player.pixels[index] == 0) continue;
+				if (
+					(x == 0 ? true : player.pixels[index - 4] == 0) ||
+					(y == 0 ? true : player.pixels[index - 4 * player.width] == 0) ||
+					(x == player.width - 1 ? true : player.pixels[index + 4] == 0) ||
+					(y == player.height - 1 ? true : player.pixels[index + 4 * player.width] == 0) ||
+					x % 48 == 0 ||
+					x % 48 == 47
+				) {
+					playerContours.set(x, y, p5.color(...playerColor));
+				} else {
+					playerContours.set(x, y, p5.color(0, 0, 0, 0));
+				}
+			}
+		}
+		playerContours.updatePixels();
+		return playerContours;
+	}
+
 	const sketch = (p5: p5Type) => {
 		p5.preload = () => {
 			background = p5.loadImage(`levels/${levelName}/background.webp`);
@@ -164,6 +214,8 @@
 		p5.setup = () => {
 			walkableMap.loadPixels();
 			logicMap.loadPixels();
+			player.loadPixels();
+			playerContours = extractContour(player, p5);
 			p5.createCanvas(width, height);
 			p5.frameRate(FPS);
 		};
@@ -207,7 +259,7 @@
 					number
 				];
 				motion = math.round(motion);
-				motion = handleWalls(walkableMap, player, position, motion);
+				motion = handleWalls(walkableMap, position, motion);
 				position = math.add(position, motion);
 			}
 			// logic
@@ -232,19 +284,7 @@
 
 			cycle = (cycle + 1) % 6;
 			// display
-			local_display(p5, background, foreground, player, position, motion, orientation, cycle);
-			if (!lightOn)
-				p5.image(
-					darkness,
-					0,
-					0,
-					width,
-					height,
-					math.ceil(position[0] - width / 2),
-					math.ceil(position[1] - height / 2),
-					width,
-					height
-				);
+			display(p5, background, foreground, player, position, orientation, cycle);
 		};
 	};
 </script>

@@ -1,4 +1,5 @@
-<script>
+<script lang="ts">
+	import { number } from 'mathjs';
 	import Game from '../lib/Game.svelte';
 
 	let playerNames = import.meta.glob('../../static/players/*.webp');
@@ -10,6 +11,7 @@
 
 	let levelName = '01_tutorial';
 	let playerName = 'Laurent';
+	let playerColor: [number, number, number, number] = [255, 255, 255, 255];
 	let lightOn = true;
 	let ready = false;
 </script>
@@ -36,6 +38,6 @@
 
 {#key playerName}
 	{#key levelName}
-		<Game {playerName} {levelName} {lightOn} />
+		<Game {playerName} {playerColor} {levelName} {lightOn} />
 	{/key}
 {/key}
