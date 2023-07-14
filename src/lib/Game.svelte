@@ -199,7 +199,6 @@
 				motion = handleWalls(walkableMap, player, position, motion);
 				position = math.add(position, motion);
 			}
-			console.log(motion);
 			// logic
 			function updateStep(step: boolean, stepNumber: number, stepsAchieved: Array<boolean>) {
 				let alreadyAchieved = step;
