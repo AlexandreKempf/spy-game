@@ -63,7 +63,7 @@
 		);
 		let speed = vectorNorm(motion) as number;
 		let animationScore =
-			animationTable[speed == 0 ? 'idle' : 'walk'] +
+			animationTable[inputs.includes(true) ? 'walk' : 'idle'] +
 			animationTable[orientation] +
 			playerWidth * cycle;
 
