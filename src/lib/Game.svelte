@@ -185,10 +185,9 @@
 		return minAlpha + (255 - minAlpha) * (1 - transparency);
 	}
 
-	function extractCache(visionVec: [number, number], lightOn: boolean, p5: p5Type): p5Type.Image {
+	function extractCache(visionVec: [number, number], p5: p5Type): p5Type.Image {
 		let cache = p5.createImage(width, height);
 		visionVec = normalize(visionVec) as [number, number];
-		let grey = 50;
 		let x: number;
 		let y: number;
 		let index: number;
@@ -200,24 +199,16 @@
 			for (y = 0; y < height; y++) {
 				index = getIndex([x, y], cache);
 				pixelVec = [x - width / 2, y - height / 2];
-				if (lightOn)
-					pixelVec = math.add(pixelVec, math.multiply(visionVec, 20)) as [number, number];
 				range = vectorNorm(pixelVec);
 				transparency = 0;
 				pixelVec = normalize(pixelVec) as [number, number];
-				if (lightOn) {
-					transparency =
-						0.2 + (0.8 * (pixelVec[0] * visionVec[0] + pixelVec[1] * visionVec[1] + 1)) / 2;
-					color = 255 * (1 - transparency);
-				} else {
-					transparency = math.pow(
-						math.max(0, pixelVec[0] * visionVec[0] + pixelVec[1] * visionVec[1]),
-						2
-					) as number;
-					transparency = transparency * math.max(0, 1 - range / nightVisionRange);
-					transparency = math.max(transparency, 1 - range / visionCircleRange);
-					color = 100 * transparency;
-				}
+				transparency = math.pow(
+					math.max(0, pixelVec[0] * visionVec[0] + pixelVec[1] * visionVec[1]),
+					2
+				) as number;
+				transparency = transparency * math.max(0, 1 - range / nightVisionRange);
+				transparency = math.max(transparency, 1 - range / visionCircleRange);
+				color = 100 * transparency;
 				cache.set(x, y, p5.color(color, color, color, getAlpha(transparency)));
 			}
 		}
@@ -275,10 +266,10 @@
 			player.loadPixels();
 			playerContours = extractContour(player, p5);
 			nightVisionCaches = {
-				left: extractCache([-1, 0], false, p5),
-				right: extractCache([+1, 0], false, p5),
-				down: extractCache([0, +1], false, p5),
-				up: extractCache([0, -1], false, p5)
+				left: extractCache([-1, 0], p5),
+				right: extractCache([+1, 0], p5),
+				down: extractCache([0, +1], p5),
+				up: extractCache([0, -1], p5)
 			};
 			p5.createCanvas(width, height);
 			p5.frameRate(FPS);
