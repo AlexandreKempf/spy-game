@@ -14,7 +14,7 @@
 	let walkableMap: p5Type.Image;
 	let logicMap: p5Type.Image;
 	let darkness: p5Type.Image;
-	let nightVisionCaches: { [key: string]: p5Type.Image };
+	let nightVisionCaches: { [key: number]: p5Type.Image };
 	let player: p5Type.Image;
 	let playerContours: p5Type.Image;
 
@@ -30,15 +30,17 @@
 	let visionCircleRange = 40;
 
 	let inputs: [boolean, boolean, boolean, boolean] = [false, false, false, false];
-	let orientation: string = 'down';
+	let motion: [number, number];
+	let playerOrientation: number = 2; // start down
+	let controlOrientation: number = -1; // no control
 	let cycle: number = 0;
-	let animationTable: { [key: string]: number } = {
+	let animationTable: { [key: string | number]: number } = {
 		idle: 0,
 		walk: 1152,
-		right: 0,
-		up: 288,
-		left: 576,
-		down: 864
+		0: 0, // right
+		2: 864, // down
+		4: 576, // left
+		6: 288 // up
 	};
 
 	let position: [number, number];
@@ -53,7 +55,8 @@
 		foreground: p5Type.Image,
 		player: p5Type.Image,
 		position: [number, number],
-		orientation: string,
+		playerOrientation: number,
+		controlOrientation: number,
 		cycle: number
 	) {
 		p5.background(lightOn ? 'white' : 'black');
@@ -70,7 +73,7 @@
 		);
 		let animationScore =
 			animationTable[inputs.includes(true) ? 'walk' : 'idle'] +
-			animationTable[orientation] +
+			animationTable[playerOrientation] +
 			playerWidth * cycle;
 
 		p5.image(
@@ -107,7 +110,11 @@
 				width,
 				height
 			);
-			p5.image(nightVisionCaches[orientation], 0, 0);
+			p5.image(
+				nightVisionCaches[controlOrientation != -1 ? controlOrientation : playerOrientation],
+				0,
+				0
+			);
 			p5.image(
 				playerContours,
 				math.ceil(width / 2) - playerWidth / 2,
@@ -132,8 +139,14 @@
 		return math.divide(vector, norm) as number[];
 	}
 
-	function getIndex(position: [number, number], map: p5Type.Image): number {
+	function getPixelIndex(position: [number, number], map: p5Type.Image): number {
 		return (position[0] + position[1] * map.width) * 4;
+	}
+
+	function getVisionIndex(motion: [number, number]): number {
+		let angle = math.asin(normalize(motion)[1]) as number;
+		if (motion[0] < 0) angle = math.pi - angle;
+		return math.round((angle / math.pi) * 4 + 8) % 8;
 	}
 
 	function handleWalls(
@@ -149,13 +162,13 @@
 		];
 
 		let stopHorizontal = (math.add(keypoints, [derivedPosition[0], 0]) as [number, number][])
-			.map((pos: [number, number]) => getIndex(pos, walkableMap))
+			.map((pos: [number, number]) => getPixelIndex(pos, walkableMap))
 			.some((index: number) => walkableMap.pixels[index] == 0);
 		let stopVertical = (math.add(keypoints, [0, derivedPosition[1]]) as [number, number][])
-			.map((pos: [number, number]) => getIndex(pos, walkableMap))
+			.map((pos: [number, number]) => getPixelIndex(pos, walkableMap))
 			.some((index: number) => walkableMap.pixels[index] == 0);
 		let stopBoth = (math.add(keypoints, derivedPosition) as [number, number][])
-			.map((pos: [number, number]) => getIndex(pos, walkableMap))
+			.map((pos: [number, number]) => getPixelIndex(pos, walkableMap))
 			.some((index: number) => walkableMap.pixels[index] == 0);
 
 		if (stopHorizontal) derivedPosition[0] = 0;
@@ -171,7 +184,7 @@
 		color: [number, number, number, number]
 	) {
 		let keypoint = math.add(position, [0, 40]) as [number, number];
-		let index = getIndex(keypoint, logicMap);
+		let index = getPixelIndex(keypoint, logicMap);
 		return (
 			math.abs(logicMap.pixels[index] - color[0]) <= 2 &&
 			math.abs(logicMap.pixels[index + 1] - color[1]) <= 2 &&
@@ -197,18 +210,15 @@
 		let color: number;
 		for (x = 0; x < width; x++) {
 			for (y = 0; y < height; y++) {
-				index = getIndex([x, y], cache);
+				index = getPixelIndex([x, y], cache);
 				pixelVec = [x - width / 2, y - height / 2];
 				range = vectorNorm(pixelVec);
 				transparency = 0;
 				pixelVec = normalize(pixelVec) as [number, number];
-				transparency = math.pow(
-					math.max(0, pixelVec[0] * visionVec[0] + pixelVec[1] * visionVec[1]),
-					2
-				) as number;
+				transparency = math.pow(math.max(0, math.dot(pixelVec, visionVec)), 2) as number;
 				transparency = transparency * math.max(0, 1 - range / nightVisionRange);
 				transparency = math.max(transparency, 1 - range / visionCircleRange);
-				color = 100 * transparency;
+				color = 150 * transparency;
 				cache.set(x, y, p5.color(color, color, color, getAlpha(transparency)));
 			}
 		}
@@ -223,7 +233,7 @@
 		let playerContours = p5.createImage(player.width, player.height);
 		for (x = 0; x < player.width; x++) {
 			for (y = 0; y < player.height; y++) {
-				index = getIndex([x, y], player) + 3; // Alpha channel
+				index = getPixelIndex([x, y], player) + 3; // Alpha channel
 				if (player.pixels[index] == 0) continue;
 				if (
 					(x == 0 ? true : player.pixels[index - 4] == 0) ||
@@ -266,10 +276,14 @@
 			player.loadPixels();
 			playerContours = extractContour(player, p5);
 			nightVisionCaches = {
-				left: extractCache([-1, 0], p5),
-				right: extractCache([+1, 0], p5),
-				down: extractCache([0, +1], p5),
-				up: extractCache([0, -1], p5)
+				0: extractCache([+1, 0], p5),
+				1: extractCache([+1, +1], p5),
+				2: extractCache([0, +1], p5),
+				3: extractCache([-1, +1], p5),
+				4: extractCache([-1, 0], p5),
+				5: extractCache([-1, -1], p5),
+				6: extractCache([0, -1], p5),
+				7: extractCache([+1, -1], p5)
 			};
 			p5.createCanvas(width, height);
 			p5.frameRate(FPS);
@@ -277,35 +291,37 @@
 
 		p5.draw = () => {
 			let oldInputs = inputs;
-			let motion: [number, number] = [0, 0];
+			motion = [0, 0];
 			inputs = [false, false, false, false];
-			let defaultOrientation: string = orientation;
+			let defaultPlayerOrientation: number = playerOrientation;
 			let getDefault: boolean = false;
 			if (p5.keyIsDown(p5.LEFT_ARROW)) {
 				motion[0] -= 1;
 				inputs[0] = true;
-				defaultOrientation = 'left';
-				if (!oldInputs[0]) orientation = 'left';
+				defaultPlayerOrientation = 4;
+				if (!oldInputs[0]) playerOrientation = 4;
 			} else if (oldInputs[0]) getDefault = true;
 			if (p5.keyIsDown(p5.RIGHT_ARROW)) {
 				motion[0] += 1;
 				inputs[1] = true;
-				defaultOrientation = 'right';
-				if (!oldInputs[1]) orientation = 'right';
+				defaultPlayerOrientation = 0;
+				if (!oldInputs[1]) playerOrientation = 0;
 			} else if (oldInputs[1]) getDefault = true;
 			if (p5.keyIsDown(p5.UP_ARROW)) {
 				motion[1] -= 1;
 				inputs[2] = true;
-				defaultOrientation = 'up';
-				if (!oldInputs[2]) orientation = 'up';
+				defaultPlayerOrientation = 6;
+				if (!oldInputs[2]) playerOrientation = 6;
 			} else if (oldInputs[2]) getDefault = true;
 			if (p5.keyIsDown(p5.DOWN_ARROW)) {
 				motion[1] += 1;
 				inputs[3] = true;
-				defaultOrientation = 'down';
-				if (!oldInputs[3]) orientation = 'down';
+				defaultPlayerOrientation = 2;
+				if (!oldInputs[3]) playerOrientation = 2;
 			} else if (oldInputs[3]) getDefault = true;
-			if (getDefault) orientation = defaultOrientation;
+			if (getDefault) playerOrientation = defaultPlayerOrientation;
+
+			controlOrientation = vectorNorm(motion) != 0 ? getVisionIndex(motion) : playerOrientation;
 
 			let derivedPositionNorm = vectorNorm(motion);
 			if (derivedPositionNorm != 0) {
@@ -339,7 +355,16 @@
 
 			cycle = (cycle + 1) % 6;
 			// display
-			display(p5, background, foreground, player, position, orientation, cycle);
+			display(
+				p5,
+				background,
+				foreground,
+				player,
+				position,
+				playerOrientation,
+				controlOrientation,
+				cycle
+			);
 		};
 	};
 </script>
