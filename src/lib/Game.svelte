@@ -15,6 +15,7 @@
 	let walkableMap: p5Type.Image;
 	let logicMap: p5Type.Image;
 	let darkness: p5Type.Image;
+	let winImage: p5Type.Image;
 	let nightVisionCaches: { [key: number]: p5Type.Image };
 	let player: p5Type.Image;
 	let playerContours: p5Type.Image;
@@ -28,6 +29,7 @@
 	let maxSpeed = 8;
 	let nightVisionRange = 200;
 	let visionCircleRange = 40;
+	let halfWinCycle = 6;
 
 	let inputs: [boolean, boolean, boolean, boolean] = [false, false, false, false];
 	let motion: [number, number];
@@ -49,16 +51,7 @@
 
 	let gameStateText = 'Ready to steal';
 
-	function display(
-		p5: p5Type,
-		background: p5Type.Image,
-		foreground: p5Type.Image,
-		player: p5Type.Image,
-		position: [number, number],
-		playerOrientation: number,
-		controlOrientation: number,
-		cycle: number
-	) {
+	function display(p5: p5Type) {
 		p5.background(lightOn ? 'white' : 'black');
 		p5.image(
 			background,
@@ -127,6 +120,35 @@
 				playerHeight
 			);
 		}
+	}
+
+	function displayVictoryScreen(p5: p5Type) {
+		p5.background('black');
+		p5.image(
+			winImage,
+			math.ceil(width / 2) - winImage.width / 2,
+			math.ceil(height / 2) - winImage.height / 2,
+			winImage.width,
+			winImage.height,
+			0,
+			0,
+			winImage.width,
+			winImage.height
+		);
+		let jumpHeight =
+			(-playerHeight / 4) *
+			(1 - (math.pow(((cycle % (2 * halfWinCycle)) - halfWinCycle) / halfWinCycle, 2) as number));
+		p5.image(
+			player,
+			math.ceil(width / 2) - playerWidth / 2,
+			math.ceil(height / 2) - playerHeight / 2 + jumpHeight,
+			playerWidth,
+			playerHeight,
+			animationTable[2],
+			0,
+			playerWidth,
+			playerHeight
+		);
 	}
 
 	function vectorNorm(vector: number[]): number {
@@ -261,6 +283,7 @@
 			walkableMap = p5.loadImage(`levels/${levelName}/walkable.webp`);
 			logicMap = p5.loadImage(`levels/${levelName}/logic.webp`);
 			darkness = p5.loadImage(`levels/${levelName}/darkness.webp`);
+			winImage = p5.loadImage(`assets/victory.webp`);
 			fetch(`levels/${levelName}/level.json`)
 				.then((response) => response.json())
 				.then((json) => {
@@ -312,6 +335,12 @@
 		};
 
 		p5.draw = () => {
+			if (gameState == 'Victory') {
+				cycle = cycle + 1;
+				displayVictoryScreen(p5);
+				return;
+			}
+
 			let oldInputs = inputs;
 			motion = [0, 0];
 			inputs = [false, false, false, false];
@@ -377,17 +406,9 @@
 			}
 
 			cycle = (cycle + 1) % 6;
+
 			// display
-			display(
-				p5,
-				background,
-				foreground,
-				player,
-				position,
-				playerOrientation,
-				controlOrientation,
-				cycle
-			);
+			display(p5);
 		};
 	};
 </script>
