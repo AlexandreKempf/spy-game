@@ -4,18 +4,19 @@
 	import Victory from '../lib/Victory.svelte';
 	import { gameState } from '../lib/store.js';
 
-	let playerNames = import.meta.glob('../../static/players/*.webp');
-	playerNames = Object.keys(playerNames).map((path) => path.split('/').reverse()[0].split('.')[0]);
+	let playerNames = Object.keys(import.meta.glob('../../static/players/*.webp')).map(
+		(path) => path.split('/').reverse()[0].split('.')[0]
+	);
 
-	let levelNames = import.meta.glob('../../static/levels/*/*');
-	levelNames = Object.keys(levelNames).map((path) => path.split('/').reverse()[1]);
+	let levelNames = Object.keys(import.meta.glob('../../static/levels/*/*')).map(
+		(path) => path.split('/').reverse()[1]
+	);
 	levelNames = [...new Set(levelNames)];
 
 	let levelName = '01_tutorial';
 	let playerName = 'Laurent';
 	let playerColor: [number, number, number, number] = [255, 255, 255, 255];
 	let lightOn = true;
-	let ready = false;
 	$: goalPath = `levels/${levelName}/goalObject.webp`;
 	$: {
 		lightOn = true;
@@ -42,9 +43,6 @@
 				{/each}
 			</select>
 		</div>
-		<button on:click={() => (lightOn = !lightOn)} class="w-50 h-15"
-			>{lightOn ? 'Night' : 'Day'}</button
-		>
 	</div>
 
 	{#key levelName}

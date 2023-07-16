@@ -29,12 +29,6 @@
 	let nightVisionRange = 200;
 	let visionCircleRange = 40;
 	let stepImageScale = 0.5;
-
-	let inputs: [boolean, boolean, boolean, boolean] = [false, false, false, false];
-	let motion: [number, number];
-	let playerOrientation: number = 2; // start down
-	let controlOrientation: number = -1; // no control
-	let cycle: number = 0;
 	let animationTable: { [key: string | number]: number } = {
 		idle: 0,
 		walk: 1152,
@@ -44,9 +38,26 @@
 		6: 288 // up
 	};
 
-	let position: [number, number];
-	let stepsAchieved: Array<boolean>;
+	let initialPosition: [number, number];
 	let stepsImages: p5Type.Image[];
+
+	let position: [number, number];
+	let inputs: [boolean, boolean, boolean, boolean];
+	let motion: [number, number];
+	let cycle: number;
+	let playerOrientation: number;
+	let controlOrientation: number;
+	let stepsAchieved: Array<boolean>;
+
+	function reset() {
+		position = initialPosition;
+		inputs = [false, false, false, false];
+		motion = [0, 0];
+		cycle = 0;
+		playerOrientation = 2; // start down
+		controlOrientation = -1; // no control
+		stepsAchieved = stepsImages.map((path) => false);
+	}
 
 	function display(p5: p5Type) {
 		p5.background(lightOn ? 'white' : 'black');
@@ -261,6 +272,18 @@
 		return playerContours;
 	}
 
+	function updateStep(step: boolean, stepNumber: number, stepsAchieved: Array<boolean>) {
+		let alreadyAchieved = step;
+		let previousStepIsAchieved = stepNumber === 0 || stepsAchieved[stepNumber - 1];
+		let playerPositionIsGood = isPlayerInColor(logicMap, position, [
+			stepNumber * 10,
+			stepNumber * 10,
+			stepNumber * 10,
+			255
+		]);
+		return alreadyAchieved || (previousStepIsAchieved && playerPositionIsGood);
+	}
+
 	const sketch = (p5: p5Type) => {
 		p5.preload = () => {
 			background = p5.loadImage(`levels/${levelName}/background.webp`);
@@ -272,11 +295,11 @@
 			fetch(`levels/${levelName}/level.json`)
 				.then((response) => response.json())
 				.then((json) => {
-					position = json.initialPosition;
-					stepsAchieved = json.stepsAchieved;
+					initialPosition = json.initialPosition;
 					stepsImages = json.stepsImages.map((path: string) =>
 						p5.loadImage(`levels/${levelName}/${path}`)
 					);
+					reset();
 				});
 			if (!generateCaches) {
 				nightVisionCaches = {
@@ -319,6 +342,19 @@
 			}
 			p5.createCanvas(width, height);
 			p5.frameRate(FPS);
+		};
+
+		p5.keyPressed = () => {
+			if (p5.keyCode == p5.ENTER) {
+				if (lightOn) {
+					if (isPlayerInColor(logicMap, position, [255, 0, 0, 255])) lightOn = false;
+				} else {
+					reset();
+					lightOn = true;
+				}
+			} else if (!inputs.includes(true) && p5.keyIsDown(88) && !lightOn) {
+				stepsAchieved = stepsAchieved.map((step, index, array) => updateStep(step, index, array));
+			}
 		};
 
 		p5.draw = () => {
@@ -365,20 +401,6 @@
 				motion = handleWalls(walkableMap, position, motion);
 				position = math.add(position, motion);
 			}
-			// logic
-			function updateStep(step: boolean, stepNumber: number, stepsAchieved: Array<boolean>) {
-				let alreadyAchieved = step;
-				let previousStepIsAchieved = stepNumber === 0 || stepsAchieved[stepNumber - 1];
-				let playerPositionIsGood = isPlayerInColor(logicMap, position, [
-					stepNumber * 10,
-					stepNumber * 10,
-					stepNumber * 10,
-					255
-				]);
-				return alreadyAchieved || (previousStepIsAchieved && playerPositionIsGood);
-			}
-			if (!inputs.includes(true) && p5.keyIsDown(88) && !lightOn)
-				stepsAchieved = stepsAchieved.map((step, index, array) => updateStep(step, index, array));
 			if (
 				$gameState != 'victory' &&
 				stepsAchieved.every((v) => v) &&
@@ -387,6 +409,7 @@
 				$gameState = 'victory';
 			}
 
+			// logic
 			cycle = (cycle + 1) % 6;
 
 			// display
@@ -395,9 +418,4 @@
 	};
 </script>
 
-{#if !lightOn}
-	<p>Stealing</p>
-{:else}
-	<p>Press the "Night" button when you're ready</p>
-{/if}
 <P5 {sketch} />
