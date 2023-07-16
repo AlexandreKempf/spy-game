@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { number } from 'mathjs';
 	import Game from '../lib/Game.svelte';
+	import Victory from '../lib/Victory.svelte';
+	import { gameState } from '../lib/store.js';
 
 	let playerNames = import.meta.glob('../../static/players/*.webp');
 	playerNames = Object.keys(playerNames).map((path) => path.split('/').reverse()[0].split('.')[0]);
@@ -58,7 +60,11 @@
 		<div class="grid h-10 place-items-center">
 			{#key playerName}
 				{#key lightOn}
-					<Game {playerName} {playerColor} {levelName} {lightOn} />
+					{#if $gameState == 'running'}
+						<Game {playerName} {playerColor} {levelName} {lightOn} />
+					{:else if $gameState == 'victory'}
+						<Victory {playerName} {playerColor} {levelName} {lightOn} />
+					{/if}
 				{/key}
 			{/key}
 		</div>
