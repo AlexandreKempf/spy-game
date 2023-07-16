@@ -366,7 +366,7 @@
 				]);
 				return alreadyAchieved || (previousStepIsAchieved && playerPositionIsGood);
 			}
-			if (vectorNorm(motion) == 0 && p5.keyIsDown(88))
+			if (!inputs.includes(true) && p5.keyIsDown(88))
 				stepsAchieved = stepsAchieved.map((step, index, array) => updateStep(step, index, array));
 			let indexLastAcheivedStep = stepsAchieved.lastIndexOf(true);
 			gameState = indexLastAcheivedStep === -1 ? gameState : stepsText[indexLastAcheivedStep];
