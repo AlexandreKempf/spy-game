@@ -395,5 +395,4 @@
 {:else}
 	<p>Press the "Night" button when you're ready</p>
 {/if}
-<button class="w-100 h-100" />
-<!-- <P5 {sketch} /> -->
+<P5 {sketch} />
