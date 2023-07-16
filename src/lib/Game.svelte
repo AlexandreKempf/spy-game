@@ -18,6 +18,7 @@
 	let player: p5Type.Image;
 	let playerContours: p5Type.Image;
 
+	let generateCaches = false;
 	let width = 500;
 	let height = 500;
 	let playerWidth = 48;
@@ -25,8 +26,6 @@
 	let FPS = 15;
 	let maxSpeed = 8;
 	let nightVisionRange = 200;
-	let visionHalfAngle = math.pi / 4;
-	let visionAngleDecay = visionHalfAngle * 0.1;
 	let visionCircleRange = 40;
 
 	let inputs: [boolean, boolean, boolean, boolean] = [false, false, false, false];
@@ -211,9 +210,9 @@
 		for (x = 0; x < width; x++) {
 			for (y = 0; y < height; y++) {
 				index = getPixelIndex([x, y], cache);
+				transparency = 0;
 				pixelVec = [x - width / 2, y - height / 2];
 				range = vectorNorm(pixelVec);
-				transparency = 0;
 				pixelVec = normalize(pixelVec) as [number, number];
 				transparency = math.pow(math.max(0, math.dot(pixelVec, visionVec)), 2) as number;
 				transparency = transparency * math.max(0, 1 - range / nightVisionRange);
@@ -268,6 +267,18 @@
 					stepsAchieved = json.stepsAchieved;
 					stepsText = json.stepsText;
 				});
+			if (!generateCaches) {
+				nightVisionCaches = {
+					0: p5.loadImage(`assets/night_cache_0.webp`),
+					1: p5.loadImage(`assets/night_cache_1.webp`),
+					2: p5.loadImage(`assets/night_cache_2.webp`),
+					3: p5.loadImage(`assets/night_cache_3.webp`),
+					4: p5.loadImage(`assets/night_cache_4.webp`),
+					5: p5.loadImage(`assets/night_cache_5.webp`),
+					6: p5.loadImage(`assets/night_cache_6.webp`),
+					7: p5.loadImage(`assets/night_cache_7.webp`)
+				};
+			}
 		};
 
 		p5.setup = () => {
@@ -275,16 +286,26 @@
 			logicMap.loadPixels();
 			player.loadPixels();
 			playerContours = extractContour(player, p5);
-			nightVisionCaches = {
-				0: extractCache([+1, 0], p5),
-				1: extractCache([+1, +1], p5),
-				2: extractCache([0, +1], p5),
-				3: extractCache([-1, +1], p5),
-				4: extractCache([-1, 0], p5),
-				5: extractCache([-1, -1], p5),
-				6: extractCache([0, -1], p5),
-				7: extractCache([+1, -1], p5)
-			};
+			if (generateCaches) {
+				nightVisionCaches = {
+					0: extractCache([+1, 0], p5),
+					1: extractCache([+1, +1], p5),
+					2: extractCache([0, +1], p5),
+					3: extractCache([-1, +1], p5),
+					4: extractCache([-1, 0], p5),
+					5: extractCache([-1, -1], p5),
+					6: extractCache([0, -1], p5),
+					7: extractCache([+1, -1], p5)
+				};
+				nightVisionCaches[0].save('night_cache_0.png', 'png');
+				nightVisionCaches[1].save('night_cache_1.png', 'png');
+				nightVisionCaches[2].save('night_cache_2.png', 'png');
+				nightVisionCaches[3].save('night_cache_3.png', 'png');
+				nightVisionCaches[4].save('night_cache_4.png', 'png');
+				nightVisionCaches[5].save('night_cache_5.png', 'png');
+				nightVisionCaches[6].save('night_cache_6.png', 'png');
+				nightVisionCaches[7].save('night_cache_7.png', 'png');
+			}
 			p5.createCanvas(width, height);
 			p5.frameRate(FPS);
 		};
