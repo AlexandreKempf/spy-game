@@ -63,7 +63,7 @@
 					{#if $gameState == 'running'}
 						<Game {playerName} {playerColor} {levelName} {lightOn} />
 					{:else if $gameState == 'victory'}
-						<Victory {playerName} {playerColor} {levelName} {lightOn} />
+						<Victory {playerName} />
 					{/if}
 				{/key}
 			{/key}

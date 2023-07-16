@@ -2,8 +2,8 @@
     "stepsAchieved": [
         false
     ],
-    "stepsText": [
-        "You stole the object"
+    "stepsImages": [
+        "goalObject.webp"
     ],
     "initialPosition": [
         1105,

@@ -15,7 +15,6 @@
 	let walkableMap: p5Type.Image;
 	let logicMap: p5Type.Image;
 	let darkness: p5Type.Image;
-	let winImage: p5Type.Image;
 	let nightVisionCaches: { [key: number]: p5Type.Image };
 	let player: p5Type.Image;
 	let playerContours: p5Type.Image;
@@ -29,6 +28,7 @@
 	let maxSpeed = 8;
 	let nightVisionRange = 200;
 	let visionCircleRange = 40;
+	let stepImageScale = 0.5;
 
 	let inputs: [boolean, boolean, boolean, boolean] = [false, false, false, false];
 	let motion: [number, number];
@@ -46,9 +46,7 @@
 
 	let position: [number, number];
 	let stepsAchieved: Array<boolean>;
-	let stepsText: Array<string>;
-
-	let gameStateText = 'Ready to steal';
+	let stepsImages: p5Type.Image[];
 
 	function display(p5: p5Type) {
 		p5.background(lightOn ? 'white' : 'black');
@@ -118,6 +116,24 @@
 				playerWidth,
 				playerHeight
 			);
+		}
+		let stepsImagesOffset = 10;
+		let stepImage: p5Type.Image;
+		for (let stepIndex = 0; stepIndex < stepsAchieved.length; stepIndex++) {
+			if (!stepsAchieved[stepIndex]) break;
+			stepImage = stepsImages[stepIndex];
+			p5.image(
+				stepImage,
+				stepsImagesOffset,
+				10,
+				stepImage.width * stepImageScale,
+				stepImage.height * stepImageScale,
+				0,
+				0,
+				stepImage.width,
+				stepImage.height
+			);
+			stepsImagesOffset = stepsImagesOffset + stepImage.width * stepImageScale + 10;
 		}
 	}
 
@@ -258,7 +274,9 @@
 				.then((json) => {
 					position = json.initialPosition;
 					stepsAchieved = json.stepsAchieved;
-					stepsText = json.stepsText;
+					stepsImages = json.stepsImages.map((path: string) =>
+						p5.loadImage(`levels/${levelName}/${path}`)
+					);
 				});
 			if (!generateCaches) {
 				nightVisionCaches = {
@@ -361,9 +379,6 @@
 			}
 			if (!inputs.includes(true) && p5.keyIsDown(88) && !lightOn)
 				stepsAchieved = stepsAchieved.map((step, index, array) => updateStep(step, index, array));
-			let indexLastAcheivedStep = stepsAchieved.lastIndexOf(true);
-			gameStateText =
-				indexLastAcheivedStep === -1 ? gameStateText : stepsText[indexLastAcheivedStep];
 			if (stepsAchieved.every((v) => v) && isPlayerInColor(logicMap, position, [255, 0, 0, 255])) {
 				$gameState = 'victory';
 			}
@@ -377,7 +392,7 @@
 </script>
 
 {#if !lightOn}
-	<p>{gameStateText}</p>
+	<p>Stealing</p>
 {:else}
 	<p>Press the "Night" button when you're ready</p>
 {/if}
