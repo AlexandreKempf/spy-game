@@ -48,6 +48,7 @@
 	let playerOrientation: number;
 	let controlOrientation: number;
 	let stepsAchieved: Array<boolean>;
+	let leftEntrance: boolean;
 
 	function reset() {
 		position = initialPosition;
@@ -57,6 +58,7 @@
 		playerOrientation = 2; // start down
 		controlOrientation = -1; // no control
 		stepsAchieved = stepsImages.map((path) => false);
+		leftEntrance = false;
 	}
 
 	function display(p5: p5Type) {
@@ -346,9 +348,7 @@
 
 		p5.keyPressed = () => {
 			if (p5.keyCode == p5.ENTER) {
-				if (lightOn) {
-					if (isPlayerInColor(logicMap, position, [255, 0, 0, 255])) lightOn = false;
-				} else {
+				if (!lightOn) {
 					reset();
 					lightOn = true;
 				}
@@ -401,12 +401,13 @@
 				motion = handleWalls(walkableMap, position, motion);
 				position = math.add(position, motion);
 			}
-			if (
-				$gameState != 'victory' &&
-				stepsAchieved.every((v) => v) &&
-				isPlayerInColor(logicMap, position, [255, 0, 0, 255])
-			) {
-				$gameState = 'victory';
+			if (isPlayerInColor(logicMap, position, [255, 0, 0, 255])) {
+				if ($gameState != 'victory') {
+					if (stepsAchieved.every((v) => v)) $gameState = 'victory';
+					else if (lightOn && leftEntrance) lightOn = false;
+				}
+			} else {
+				leftEntrance = true;
 			}
 
 			// logic
