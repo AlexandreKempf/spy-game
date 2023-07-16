@@ -3,6 +3,7 @@
 	import type * as p5Type from 'p5';
 	import * as math from 'mathjs';
 	import { base } from '$app/paths';
+	import { Confetti } from 'svelte-confetti';
 
 	export let playerName: string;
 
@@ -62,5 +63,12 @@
 	};
 </script>
 
-<p>Victory</p>
+<div class="absolute bottom-90 left-150">
+	<Confetti x={[-1, 1]} y={[-1, 1]} delay={[0, 1000]} infinite />
+</div>
+
+<div class="absolute bottom-90 left-220">
+	<Confetti x={[-1, 1]} y={[-1, 1]} delay={[0, 1000]} infinite />
+</div>
+
 <P5 {sketch} />

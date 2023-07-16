@@ -19,6 +19,7 @@
 	$: goalPath = `levels/${levelName}/goalObject.webp`;
 	$: {
 		lightOn = true;
+		$gameState = 'running';
 		levelName;
 	}
 </script>
@@ -59,13 +60,13 @@
 
 		<div class="grid h-10 place-items-center">
 			{#key playerName}
-				{#key lightOn}
-					{#if $gameState == 'running'}
+				{#if $gameState == 'running'}
+					{#key lightOn}
 						<Game {playerName} {playerColor} {levelName} {lightOn} />
-					{:else if $gameState == 'victory'}
-						<Victory {playerName} />
-					{/if}
-				{/key}
+					{/key}
+				{:else if $gameState == 'victory'}
+					<Victory {playerName} />
+				{/if}
 			{/key}
 		</div>
 	{/key}

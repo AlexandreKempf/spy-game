@@ -379,7 +379,11 @@
 			}
 			if (!inputs.includes(true) && p5.keyIsDown(88) && !lightOn)
 				stepsAchieved = stepsAchieved.map((step, index, array) => updateStep(step, index, array));
-			if (stepsAchieved.every((v) => v) && isPlayerInColor(logicMap, position, [255, 0, 0, 255])) {
+			if (
+				$gameState != 'victory' &&
+				stepsAchieved.every((v) => v) &&
+				isPlayerInColor(logicMap, position, [255, 0, 0, 255])
+			) {
 				$gameState = 'victory';
 			}
 
