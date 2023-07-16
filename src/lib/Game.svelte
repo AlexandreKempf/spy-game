@@ -366,7 +366,7 @@
 				]);
 				return alreadyAchieved || (previousStepIsAchieved && playerPositionIsGood);
 			}
-			if (!inputs.includes(true) && p5.keyIsDown(88))
+			if (!inputs.includes(true) && p5.keyIsDown(88) && !lightOn)
 				stepsAchieved = stepsAchieved.map((step, index, array) => updateStep(step, index, array));
 			let indexLastAcheivedStep = stepsAchieved.lastIndexOf(true);
 			gameState = indexLastAcheivedStep === -1 ? gameState : stepsText[indexLastAcheivedStep];
@@ -390,8 +390,10 @@
 	};
 </script>
 
-<h3>{levelName}</h3>
-<p>{gameState}</p>
-<div class="m-0 w-full h-full">
-	<P5 {sketch} />
-</div>
+{#if !lightOn}
+	<p>{gameState}</p>
+{:else}
+	<p>Press the "Night" button when you're ready</p>
+{/if}
+<button class="w-100 h-100" />
+<!-- <P5 {sketch} /> -->
