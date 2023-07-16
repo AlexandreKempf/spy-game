@@ -15,6 +15,10 @@
 	let lightOn = true;
 	let ready = false;
 	$: goalPath = `levels/${levelName}/goalObject.webp`;
+	$: {
+		lightOn = true;
+		levelName;
+	}
 </script>
 
 <article data-theme={lightOn ? 'light' : 'dark'} class="h-screen w-screen mt-0 fixed">
