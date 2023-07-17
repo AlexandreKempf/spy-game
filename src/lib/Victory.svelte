@@ -2,10 +2,8 @@
 	import P5 from 'p5-svelte';
 	import type * as p5Type from 'p5';
 	import * as math from 'mathjs';
-	import { base } from '$app/paths';
+	import { gameInfo, playerInfo } from './store.js';
 	import { Confetti } from 'svelte-confetti';
-
-	export let playerName: string;
 
 	let winImage: p5Type.Image;
 	let player: p5Type.Image;
@@ -22,7 +20,7 @@
 
 	const sketch = (p5: p5Type) => {
 		p5.preload = () => {
-			player = p5.loadImage(`players/${playerName}.webp`);
+			player = p5.loadImage(`players/${$playerInfo.name}.webp`);
 			winImage = p5.loadImage(`assets/victory.webp`);
 		};
 
@@ -63,12 +61,21 @@
 	};
 </script>
 
-<div class="absolute bottom-90 left-150">
-	<Confetti x={[-1, 1]} y={[-1, 1]} delay={[0, 1000]} infinite />
-</div>
+<article data-theme={$gameInfo.lightOn ? 'light' : 'dark'} class="h-screen w-screen mt-0 fixed">
+	<h1 class="text-center text-7xl mt-3">The Spy Game</h1>
+	<button
+		class="mt-10 border-none mx-auto w-40"
+		style:background-color={$playerInfo.color}
+		on:click={() => ($gameInfo.state = 'levelSelection')}>Try another level</button
+	>
+	<div class="absolute bottom-90 left-150">
+		<Confetti x={[-1, 1]} y={[-1, 1]} delay={[0, 1000]} infinite />
+	</div>
 
-<div class="absolute bottom-90 left-220">
-	<Confetti x={[-1, 1]} y={[-1, 1]} delay={[0, 1000]} infinite />
-</div>
-
-<P5 {sketch} />
+	<div class="absolute bottom-90 left-220">
+		<Confetti x={[-1, 1]} y={[-1, 1]} delay={[0, 1000]} infinite />
+	</div>
+	<div class="grid h-10 place-items-center mx-auto">
+		<P5 {sketch} />
+	</div>
+</article>

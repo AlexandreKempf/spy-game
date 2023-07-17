@@ -16,6 +16,9 @@ dependencies:
   p5-svelte:
     specifier: ^3.1.2
     version: 3.1.2(@types/p5@1.6.2)(p5@1.7.0)
+  svelte-awesome-color-picker:
+    specifier: ^2.4.6
+    version: 2.4.6
   svelte-confetti:
     specifier: ^1.2.4
     version: 1.2.4
@@ -898,6 +901,10 @@ packages:
   /color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
     dev: true
+
+  /colord@2.9.3:
+    resolution: {integrity: sha512-jeC1axXpnb0/2nn/Y1LPuLdgXBLH7aDcHu4KEKfqw3CUhX7ZpfBSlPKyqXE6btIgEzfWtrX3/tyBCaCvXvMkOw==}
+    dev: false
 
   /colorette@2.0.20:
     resolution: {integrity: sha512-IfEDxwoWIjkeXL1eXcDiow4UbKjhLdq6/EuSVR9GMN7KVH3r9gQ83e73hsz1Nd1T3ijd5xv1wcWRYO+D6kCI2w==}
@@ -1900,6 +1907,12 @@ packages:
     dependencies:
       has-flag: 4.0.0
     dev: true
+
+  /svelte-awesome-color-picker@2.4.6:
+    resolution: {integrity: sha512-8AEyNaq+E4m/OI6lU1mEgDDfCIye8mpYDHXOXpV04H53hizBtEbL3xfCFD9a7eK11bRysYCbhKB/ls4tGnk3GA==}
+    dependencies:
+      colord: 2.9.3
+    dev: false
 
   /svelte-check@3.4.6(postcss@8.4.26)(svelte@4.0.5):
     resolution: {integrity: sha512-OBlY8866Zh1zHQTkBMPS6psPi7o2umTUyj6JWm4SacnIHXpWFm658pG32m3dKvKFL49V4ntAkfFHKo4ztH07og==}
