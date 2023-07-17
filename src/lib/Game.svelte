@@ -18,7 +18,7 @@
 	let nightVisionCaches: { [key: number]: p5Type.Image };
 	let player: p5Type.Image;
 	let playerContours: p5Type.Image;
-	let beacon: p5Type.Image;
+	let beaconImage: p5Type.Image;
 	let beaconContours: p5Type.Image;
 
 	let generateCaches = false;
@@ -31,8 +31,9 @@
 	let nightVisionRange = 200;
 	let visionCircleRange = 40;
 	let iconsScale = 0.5;
-	let beaconVisionRange = 30;
-	let beaconSetRange = 30;
+	let beaconVerticalOffset = 30;
+	let beaconSetRange = 45;
+	let beaconCycle = 10;
 	let animationTable: { [key: string | number]: number } = {
 		idle: 0,
 		walk: 1152,
@@ -44,33 +45,32 @@
 
 	let initialPosition: [number, number];
 	let stepsImages: p5Type.Image[];
-	let remainingBeacons: number;
+	let levelBeacons: number;
 
 	let position: [number, number];
 	let inputs: [boolean, boolean, boolean, boolean];
 	let motion: [number, number];
-	let cycle: number;
+	let time: number;
 	let playerOrientation: number;
 	let controlOrientation: number;
 	let stepsAchieved: Array<boolean>;
-	let beaconsPositions: [number, number][] = [];
-	let leftEntrance: boolean;
+	let beacons: [[number, number], number][] = [];
 
 	function reset() {
 		position = initialPosition;
 		inputs = [false, false, false, false];
 		motion = [0, 0];
-		cycle = 0;
+		time = 0;
 		playerOrientation = 2; // Orientation of the player icon. Even indexes only. Start down
 		controlOrientation = -1; // Orientation of the control, thus the vision vector. Starts undefined.
 		stepsAchieved = stepsImages.map((path) => false);
 	}
 
 	function display(p5: p5Type) {
-		let animationScore =
+		let animationOffset =
 			animationTable[inputs.includes(true) ? 'walk' : 'idle'] +
 			animationTable[playerOrientation] +
-			playerWidth * cycle;
+			playerWidth * (time % 6);
 		p5.background(lightOn ? 'white' : 'black');
 		p5.image(
 			background,
@@ -83,18 +83,19 @@
 			width,
 			height
 		);
-		beaconsPositions.forEach((beaconPosition) => {
+		beacons.forEach((beacon) => {
+			let beaconPosition = beacon[0];
 			let relativePosition = math.subtract(beaconPosition, position);
 			p5.image(
-				beacon,
-				width / 2 + relativePosition[0] - beacon.width / 2,
-				height / 2 + relativePosition[1] - beacon.height / 2,
-				beacon.width,
-				beacon.height,
+				beaconImage,
+				width / 2 + relativePosition[0] - beaconImage.width / 2,
+				height / 2 + relativePosition[1] - beaconImage.height / 2,
+				beaconImage.width,
+				beaconImage.height,
 				0,
 				0,
-				beacon.width,
-				beacon.height
+				beaconImage.width,
+				beaconImage.height
 			);
 		});
 		p5.image(
@@ -103,7 +104,7 @@
 			math.ceil(height / 2) - playerHeight / 2,
 			playerWidth,
 			playerHeight,
-			animationScore,
+			animationOffset,
 			0,
 			playerWidth,
 			playerHeight
@@ -131,18 +132,20 @@
 				width,
 				height
 			);
-			beaconsPositions.forEach((beaconPosition) => {
+			beacons.forEach((beacon) => {
+				if ((time - beacon[1]) % beaconCycle <= 1) return;
+				let beaconPosition = beacon[0];
 				let relativePosition = math.subtract(beaconPosition, position);
 				p5.image(
 					beaconContours,
-					width / 2 + relativePosition[0] - beacon.width / 2,
-					height / 2 + relativePosition[1] - beacon.height / 2,
-					beacon.width,
-					beacon.height,
+					width / 2 + relativePosition[0] - beaconImage.width / 2,
+					height / 2 + relativePosition[1] - beaconImage.height / 2,
+					beaconImage.width,
+					beaconImage.height,
 					0,
 					0,
-					beacon.width,
-					beacon.height
+					beaconImage.width,
+					beaconImage.height
 				);
 			});
 			p5.image(
@@ -156,7 +159,7 @@
 				math.ceil(height / 2) - playerHeight / 2,
 				playerWidth,
 				playerHeight,
-				animationScore,
+				animationOffset,
 				0,
 				playerWidth,
 				playerHeight
@@ -189,19 +192,19 @@
 
 	function displayToolsIcons(p5: p5Type): void {
 		let toolsImagesOffset = width - 10;
-		for (let beaconIndex = 0; beaconIndex < remainingBeacons; beaconIndex++) {
+		for (let beaconIndex = 0; beaconIndex < levelBeacons - beacons.length; beaconIndex++) {
 			p5.image(
-				beacon,
-				toolsImagesOffset - beacon.width,
+				beaconImage,
+				toolsImagesOffset - beaconImage.width,
 				10,
-				beacon.width * iconsScale,
-				beacon.height * iconsScale,
+				beaconImage.width * iconsScale,
+				beaconImage.height * iconsScale,
 				0,
 				0,
-				beacon.width,
-				beacon.height
+				beaconImage.width,
+				beaconImage.height
 			);
-			toolsImagesOffset = toolsImagesOffset - beacon.width * iconsScale - 10;
+			toolsImagesOffset = toolsImagesOffset - beaconImage.width * iconsScale - 10;
 		}
 	}
 
@@ -337,22 +340,16 @@
 	function tryRemoveBeacon(aimedPosition: [number, number], p5: p5Type) {
 		let minDistance = beaconSetRange;
 		let minIndex = -1;
-		beaconsPositions.forEach((beaconPosition, index) => {
-			let distance = vectorNorm(math.subtract(aimedPosition, beaconPosition));
+		beacons.forEach((beacon, index) => {
+			let distance = vectorNorm(math.subtract(aimedPosition, beacon[0]));
 			if (distance < minDistance) {
 				minDistance = distance;
 				minIndex = index;
 			}
 		});
-		if (minDistance > beaconSetRange / 2) return false;
-		beaconsPositions.splice(minIndex, 1);
-		remainingBeacons = remainingBeacons + 1;
+		if (minDistance == beaconSetRange) return false;
+		beacons.splice(minIndex, 1);
 		return true;
-	}
-
-	function addBeacon(beaconPosition: [number, number], p5: p5Type): void {
-		beaconsPositions.push(beaconPosition);
-		remainingBeacons = remainingBeacons - 1;
 	}
 
 	function updateStep(step: boolean, stepNumber: number, stepsAchieved: Array<boolean>) {
@@ -375,7 +372,7 @@
 			walkableMap = p5.loadImage(`levels/${levelName}/walkable.webp`);
 			logicMap = p5.loadImage(`levels/${levelName}/logic.webp`);
 			darkness = p5.loadImage(`levels/${levelName}/darkness.webp`);
-			beacon = p5.loadImage(`assets/beacon.webp`);
+			beaconImage = p5.loadImage(`assets/beacon.webp`);
 			fetch(`levels/${levelName}/level.json`)
 				.then((response) => response.json())
 				.then((json) => {
@@ -383,7 +380,7 @@
 					stepsImages = json.stepsImages.map((path: string) =>
 						p5.loadImage(`levels/${levelName}/${path}`)
 					);
-					remainingBeacons = json.beacons;
+					levelBeacons = json.beacons;
 					reset();
 				});
 			if (!generateCaches) {
@@ -405,8 +402,8 @@
 			logicMap.loadPixels();
 			player.loadPixels();
 			playerContours = extractContour(player, p5);
-			beacon.loadPixels();
-			beaconContours = extractContour(beacon, p5);
+			beaconImage.loadPixels();
+			beaconContours = extractContour(beaconImage, p5);
 			if (generateCaches) {
 				nightVisionCaches = {
 					0: extractCache([+1, 0], p5),
@@ -443,11 +440,12 @@
 			} else if (p5.keyCode == 65) {
 				if (lightOn) {
 					let targetPosition = math.add(
-						position,
+						math.add(position, [0, beaconVerticalOffset]) as [number, number], // fix vertical offset
 						math.multiply(getVisionVector(controlOrientation), beaconSetRange) as [number, number]
 					);
 					if (!tryRemoveBeacon(targetPosition, p5)) {
-						if (remainingBeacons > 0) addBeacon(targetPosition, p5);
+						if (levelBeacons - beacons.length > 0)
+							beacons.push([targetPosition, time % beaconCycle]); // cycle used as a random number
 					}
 				}
 			}
@@ -505,7 +503,7 @@
 			if (isPlayerInColor(logicMap, position, [0, 0, 255, 255])) lightOn = true;
 
 			// display
-			cycle = (cycle + 1) % 6;
+			time = time + 1;
 			display(p5);
 		};
 	};
