@@ -1,71 +1,21 @@
 <script lang="ts">
 	import { number } from 'mathjs';
-	import Game from '../lib/Game.svelte';
-	import Victory from '../lib/Victory.svelte';
-	import { gameState } from '../lib/store.js';
-
-	let playerNames = Object.keys(import.meta.glob('../../static/players/*.webp')).map(
-		(path) => path.split('/').reverse()[0].split('.')[0]
-	);
-
-	let levelNames = Object.keys(import.meta.glob('../../static/levels/*/*')).map(
-		(path) => path.split('/').reverse()[1]
-	);
-	levelNames = [...new Set(levelNames)];
-
-	let levelName = '01_tutorial';
-	let playerName = 'Laurent';
-	let playerColor: [number, number, number, number] = [255, 255, 255, 255];
-	let lightOn = true;
-	$: goalPath = `levels/${levelName}/goalObject.webp`;
-	$: {
-		lightOn = true;
-		$gameState = 'running';
-		levelName;
-	}
+	import Game from '$lib/Game.svelte';
+	import Victory from '$lib/Victory.svelte';
+	import CaracterPicker from '$lib/CaracterPicker.svelte';
+	import LevelPicker from '$lib/LevelPicker.svelte';
+	import Rules from '$lib/Rules.svelte';
+	import { gameInfo, playerInfo } from '$lib/store.js';
 </script>
 
-<article data-theme={lightOn ? 'light' : 'dark'} class="h-screen w-screen mt-0 fixed">
-	<div class="flex space-x-10 items-center">
-		<div>
-			<label for="playerName">Pick a player</label>
-			<select id="playerName" bind:value={playerName} class="w-50">
-				{#each playerNames as playerName}
-					<option value={playerName} selected>{playerName}</option>
-				{/each}
-			</select>
-		</div>
-		<div>
-			<label for="levelName">Pick a level</label>
-			<select id="levelName" bind:value={levelName} class="w-50">
-				{#each levelNames as levelName}
-					<option value={levelName} selected>{levelName}</option>
-				{/each}
-			</select>
-		</div>
-	</div>
-
-	{#key levelName}
-		<div class="flex space-x-5 items-center">
-			<p class="text-lg">You need to steal this object:</p>
-			<img src={goalPath} alt="object to steal" />
-		</div>
-		<p>Explore the museum by day, and when you're ready comes by night to steal it.</p>
-		<p>
-			In order to steal it, you need to go in front of the object, stand still, press "X" and then
-			sneak back to the entrance of the museum
-		</p>
-
-		<div class="grid h-10 place-items-center">
-			{#key playerName}
-				{#if $gameState == 'running'}
-					{#key lightOn}
-						<Game {playerName} {playerColor} {levelName} {lightOn} />
-					{/key}
-				{:else if $gameState == 'victory'}
-					<Victory {playerName} />
-				{/if}
-			{/key}
-		</div>
-	{/key}
-</article>
+{#if $gameInfo.state == 'rules'}
+	<Rules />
+{:else if $gameInfo.state == 'playerSelection'}
+	<CaracterPicker />
+{:else if $gameInfo.state == 'levelSelection'}
+	<LevelPicker />
+{:else if $gameInfo.state == 'running'}
+	<Game />
+{:else if $gameInfo.state == 'victory'}
+	<Victory />
+{/if}

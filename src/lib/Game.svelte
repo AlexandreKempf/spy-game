@@ -2,13 +2,7 @@
 	import P5 from 'p5-svelte';
 	import type * as p5Type from 'p5';
 	import * as math from 'mathjs';
-	import { base } from '$app/paths';
-	import { gameState } from './store.js';
-
-	export let playerName: string;
-	export let playerColor: [number, number, number, number];
-	export let levelName: string;
-	export let lightOn: boolean;
+	import { gameInfo, playerInfo } from './store.js';
 
 	let background: p5Type.Image;
 	let foreground: p5Type.Image;
@@ -71,7 +65,7 @@
 			animationTable[inputs.includes(true) ? 'walk' : 'idle'] +
 			animationTable[playerOrientation] +
 			playerWidth * (time % 6);
-		p5.background(lightOn ? 'white' : 'black');
+		p5.background($gameInfo.lightOn ? 'white' : 'black');
 		p5.image(
 			background,
 			0,
@@ -120,7 +114,7 @@
 			width,
 			height
 		);
-		if (!lightOn) {
+		if (!$gameInfo.lightOn) {
 			p5.image(
 				darkness,
 				0,
@@ -309,6 +303,12 @@
 		cache.updatePixels();
 		return cache;
 	}
+	function hexToRgb(hex: string): [number, number, number] {
+		var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+		return result
+			? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+			: [255, 255, 255];
+	}
 
 	function extractContour(player: p5Type.Image, p5: p5Type): p5Type.Image {
 		let x: number;
@@ -327,7 +327,7 @@
 					x % 48 == 0 ||
 					x % 48 == 47
 				) {
-					playerContours.set(x, y, p5.color(...playerColor));
+					playerContours.set(x, y, p5.color(...hexToRgb($playerInfo.color)));
 				} else {
 					playerContours.set(x, y, p5.color(0, 0, 0, 0));
 				}
@@ -366,19 +366,19 @@
 
 	const sketch = (p5: p5Type) => {
 		p5.preload = () => {
-			background = p5.loadImage(`levels/${levelName}/background.webp`);
-			foreground = p5.loadImage(`levels/${levelName}/foreground.webp`);
-			player = p5.loadImage(`players/${playerName}.webp`);
-			walkableMap = p5.loadImage(`levels/${levelName}/walkable.webp`);
-			logicMap = p5.loadImage(`levels/${levelName}/logic.webp`);
-			darkness = p5.loadImage(`levels/${levelName}/darkness.webp`);
-			beaconImage = p5.loadImage(`assets/beacon.webp`);
-			fetch(`levels/${levelName}/level.json`)
+			background = p5.loadImage(`levels/${$gameInfo.level}/background.webp`);
+			foreground = p5.loadImage(`levels/${$gameInfo.level}/foreground.webp`);
+			player = p5.loadImage(`players/${$playerInfo.name}.webp`);
+			walkableMap = p5.loadImage(`levels/${$gameInfo.level}/walkable.webp`);
+			logicMap = p5.loadImage(`levels/${$gameInfo.level}/logic.webp`);
+			darkness = p5.loadImage(`levels/${$gameInfo.level}/darkness.webp`);
+      beaconImage = p5.loadImage(`assets/beacon.webp`);
+			fetch(`levels/${$gameInfo.level}/level.json`)
 				.then((response) => response.json())
 				.then((json) => {
 					initialPosition = json.initialPosition;
 					stepsImages = json.stepsImages.map((path: string) =>
-						p5.loadImage(`levels/${levelName}/${path}`)
+						p5.loadImage(`levels/${$gameInfo.level}/${path}`)
 					);
 					levelBeacons = json.beacons;
 					reset();
@@ -426,19 +426,20 @@
 			}
 			p5.createCanvas(width, height);
 			p5.frameRate(FPS);
+			$gameInfo.lightOn = true;
 		};
 
 		p5.keyPressed = () => {
 			if (p5.keyCode == p5.ENTER) {
-				if (!lightOn) {
-					lightOn = true;
+				if (!$gameInfo.lightOn) {
+					$gameInfo.lightOn = true;
 					stepsAchieved = stepsAchieved.map((step) => false);
 				}
 			} else if (p5.keyCode == 88) {
-				if (!lightOn && !inputs.includes(true))
+				if (!$gameInfo.lightOn && !inputs.includes(true))
 					stepsAchieved = stepsAchieved.map((step, index, array) => updateStep(step, index, array));
 			} else if (p5.keyCode == 65) {
-				if (lightOn) {
+				if ($gameInfo.lightOn) {
 					let targetPosition = math.add(
 						math.add(position, [0, beaconVerticalOffset]) as [number, number], // fix vertical offset
 						math.multiply(getVisionVector(controlOrientation), beaconSetRange) as [number, number]
@@ -496,11 +497,14 @@
 				position = math.add(position, motion);
 			}
 			if (isPlayerInColor(logicMap, position, [255, 0, 0, 255])) {
-				if ($gameState != 'victory' && stepsAchieved.every((v) => v)) $gameState = 'victory';
+				if ($gameInfo.state != 'victory' && stepsAchieved.every((v) => v)) {
+					stepsAchieved = stepsAchieved.map((step) => false);
+					$gameInfo.state = 'victory';
+				}
 			}
 
-			if (isPlayerInColor(logicMap, position, [0, 255, 0, 255])) lightOn = false;
-			if (isPlayerInColor(logicMap, position, [0, 0, 255, 255])) lightOn = true;
+			if (isPlayerInColor(logicMap, position, [0, 255, 0, 255])) $gameInfo.lightOn = false;
+			if (isPlayerInColor(logicMap, position, [0, 0, 255, 255])) $gameInfo.lightOn = true;
 
 			// display
 			time = time + 1;
@@ -509,4 +513,14 @@
 	};
 </script>
 
-<P5 {sketch} />
+<article data-theme={$gameInfo.lightOn ? 'light' : 'dark'} class="h-screen w-screen mt-0 fixed">
+	<h1 class="text-center text-7xl mt-3">The Spy Game</h1>
+	<div class="flex items-center justify-center">
+		<p class="text-lg font-bold">You need to steal this object:</p>
+		<img src={`levels/${$gameInfo.level}/goalObject.webp`} alt="object to steal" />
+	</div>
+
+	<div class="grid h-10 place-items-center mx-auto">
+		<P5 {sketch} />
+	</div>
+</article>
