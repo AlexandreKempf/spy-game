@@ -11,8 +11,8 @@
 	let logicMap: p5Type.Image;
 	let darkness: p5Type.Image;
 	let nightVisionCaches: { [key: number]: p5Type.Image };
-	let player: p5Type.Image;
-	let playerContours: p5Type.Image;
+	let players: { [key: string]: p5Type.Image } = {};
+	let playersContours: { [key: string]: p5Type.Image } = {};
 
 	let generateCaches = false;
 	let width = 500;
@@ -36,7 +36,6 @@
 	let initialPosition: [number, number];
 	let stepsImages: p5Type.Image[];
 
-	let position: [number, number];
 	let inputs: [boolean, boolean, boolean, boolean];
 	let motion: [number, number];
 	let cycle: number;
@@ -72,17 +71,26 @@
 			animationTable[playerOrientation] +
 			playerWidth * cycle;
 
-		p5.image(
-			player,
-			math.ceil(width / 2) - playerWidth / 2,
-			math.ceil(height / 2) - playerHeight / 2,
-			playerWidth,
-			playerHeight,
-			$multiStore.users[$multiStore.username].animationScore,
-			0,
-			playerWidth,
-			playerHeight
-		);
+		for (const [username, player] of Object.entries(players)) {
+			p5.image(
+				player,
+				math.ceil(width / 2) -
+					playerWidth / 2 +
+					$multiStore.users[username].position[0] -
+					$multiStore.users[$multiStore.username].position[0],
+				math.ceil(height / 2) -
+					playerHeight / 2 +
+					$multiStore.users[username].position[1] -
+					$multiStore.users[$multiStore.username].position[1],
+				playerWidth,
+				playerHeight,
+				$multiStore.users[username].animationScore,
+				0,
+				playerWidth,
+				playerHeight
+			);
+		}
+
 		p5.image(
 			foreground,
 			0,
@@ -111,18 +119,27 @@
 				0,
 				0
 			);
-			p5.image(
-				playerContours,
-				math.ceil(width / 2) - playerWidth / 2,
-				math.ceil(height / 2) - playerHeight / 2,
-				playerWidth,
-				playerHeight,
-				$multiStore.users[$multiStore.username].animationScore,
-				0,
-				playerWidth,
-				playerHeight
-			);
+			for (const [username, playerContour] of Object.entries(playersContours)) {
+				p5.image(
+					playerContour,
+					math.ceil(width / 2) -
+						playerWidth / 2 +
+						$multiStore.users[username].position[0] -
+						$multiStore.users[$multiStore.username].position[0],
+					math.ceil(height / 2) -
+						playerHeight / 2 +
+						$multiStore.users[username].position[1] -
+						$multiStore.users[$multiStore.username].position[1],
+					playerWidth,
+					playerHeight,
+					$multiStore.users[username].animationScore,
+					0,
+					playerWidth,
+					playerHeight
+				);
+			}
 		}
+		// hud top left
 		let stepsImagesOffset = 10;
 		let stepImage: p5Type.Image;
 		for (let stepIndex = 0; stepIndex < stepsAchieved.length; stepIndex++) {
@@ -246,7 +263,11 @@
 			: [255, 255, 255];
 	}
 
-	function extractContour(player: p5Type.Image, p5: p5Type): p5Type.Image {
+	function extractContour(
+		player: p5Type.Image,
+		color: [number, number, number, number],
+		p5: p5Type
+	): p5Type.Image {
 		let x: number;
 		let y: number;
 		let index: number;
@@ -263,11 +284,7 @@
 					x % 48 == 0 ||
 					x % 48 == 47
 				) {
-					playerContours.set(
-						x,
-						y,
-						p5.color(...hexToRgb($multiStore.users[$multiStore.username].color))
-					);
+					playerContours.set(x, y, p5.color(...color));
 				} else {
 					playerContours.set(x, y, p5.color(0, 0, 0, 0));
 				}
@@ -292,7 +309,9 @@
 		p5.preload = () => {
 			background = p5.loadImage(`levels/${$multiStore.common.level}/background.webp`);
 			foreground = p5.loadImage(`levels/${$multiStore.common.level}/foreground.webp`);
-			player = p5.loadImage(`players/${$multiStore.users[$multiStore.username].skin}.webp`);
+			for (const [username, store] of Object.entries($multiStore.users)) {
+				players[username] = p5.loadImage(`players/${store.skin}.webp`);
+			}
 			walkableMap = p5.loadImage(`levels/${$multiStore.common.level}/walkable.webp`);
 			logicMap = p5.loadImage(`levels/${$multiStore.common.level}/logic.webp`);
 			darkness = p5.loadImage(`levels/${$multiStore.common.level}/darkness.webp`);
@@ -322,8 +341,14 @@
 		p5.setup = () => {
 			walkableMap.loadPixels();
 			logicMap.loadPixels();
-			player.loadPixels();
-			playerContours = extractContour(player, p5);
+			for (const [username, store] of Object.entries($multiStore.users)) {
+				players[username].loadPixels();
+				playersContours[username] = extractContour(
+					players[username],
+					hexToRgb($multiStore.users[username].color),
+					p5
+				);
+			}
 			if (generateCaches) {
 				nightVisionCaches = {
 					0: extractCache([+1, 0], p5),
