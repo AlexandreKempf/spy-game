@@ -62,10 +62,7 @@
 	};
 </script>
 
-<article
-	data-theme={$multiStore.users[$multiStore.username].lightOn ? 'light' : 'dark'}
-	class="h-screen w-screen mt-0 fixed"
->
+<article data-theme="dark" class="h-screen w-screen mt-0 fixed">
 	<h1 class="text-center text-7xl mt-3">The Spy Game</h1>
 	{#if $multiStore.users[$multiStore.username].master}
 		<button

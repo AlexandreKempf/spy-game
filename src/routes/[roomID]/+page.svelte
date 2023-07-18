@@ -5,7 +5,7 @@
 	import LevelPicker from '$lib/LevelPicker.svelte';
 	import { masterInfo, playerInfo } from '$lib/store.js';
 	import { page } from '$app/stores';
-	import { multiplayerStore } from '$lib/multiplayerStore';
+	import { multiplayerStore } from '$lib/multiplayerStore.js';
 	import MultiplayerGame from '$lib/MultiplayerGame.svelte';
 
 	let cyclicTimer: NodeJS.Timer;
@@ -15,9 +15,11 @@
 	$: {
 		clearInterval(cyclicTimer);
 		cyclicTimer = setInterval(() => {
-			if ($playerInfo.master) $multiStore.common = $masterInfo; // new player needs gamestate
-			$multiStore.users[$playerInfo.name] = $playerInfo; // old players need notification of new players
-		}, 1000);
+			if ($multiStore.common.state == 'playerSelection') {
+				if ($playerInfo.master) $multiStore.common = $masterInfo; // new player needs gamestate
+				$multiStore.users[$playerInfo.name] = $playerInfo; // old players need notification of new players
+			}
+		}, 300);
 	}
 </script>
 

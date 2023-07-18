@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { playerInfo } from '../lib/store.js';
+	import { playerInfo } from '$lib/store.js';
 
 	let playerName: string;
 	let roomInput: string;

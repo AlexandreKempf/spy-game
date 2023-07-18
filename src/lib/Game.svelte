@@ -42,7 +42,6 @@
 	let stepsImages: p5Type.Image[];
 	let levelBeacons: number;
 
-	let position: [number, number];
 	let inputs: [boolean, boolean, boolean, boolean];
 	let motion: [number, number];
 	let time: number;
@@ -51,8 +50,13 @@
 	let stepsAchieved: Array<boolean>;
 	let beacons: [[number, number], number][] = [];
 
+	let position: [number, number];
+	let lightOn: boolean;
+	let animationScore: number;
+	let victory: boolean;
+
 	function reset() {
-		$multiStore.users[$multiStore.username].position = initialPosition;
+		position = initialPosition;
 		inputs = [false, false, false, false];
 		motion = [0, 0];
 		time = 0;
@@ -61,20 +65,30 @@
 		stepsAchieved = stepsImages.map((path) => false);
 	}
 
+	function updateMultiStore() {
+		$multiStore.users[$multiStore.username] = {
+			...$multiStore.users[$multiStore.username],
+			position: position,
+			lightOn: lightOn,
+			animationScore: animationScore,
+			victory: victory
+		};
+	}
+
 	function display(p5: p5Type) {
-		$multiStore.users[$multiStore.username].animationScore =
+		animationScore =
 			animationTable[inputs.includes(true) ? 'walk' : 'idle'] +
 			animationTable[playerOrientation] +
 			playerWidth * (time % 6);
-		p5.background($multiStore.users[$multiStore.username].lightOn ? 'white' : 'black');
+		p5.background(lightOn ? 'white' : 'black');
 		p5.image(
 			background,
 			0,
 			0,
 			width,
 			height,
-			math.ceil($multiStore.users[$multiStore.username].position[0] - width / 2),
-			math.ceil($multiStore.users[$multiStore.username].position[1] - height / 2),
+			math.ceil(position[0] - width / 2),
+			math.ceil(position[1] - height / 2),
 			width,
 			height
 		);
@@ -99,7 +113,7 @@
 			math.ceil(height / 2) - playerHeight / 2,
 			playerWidth,
 			playerHeight,
-			$multiStore.users[$multiStore.username].animationScore,
+			animationScore,
 			0,
 			playerWidth,
 			playerHeight
@@ -110,20 +124,20 @@
 			0,
 			width,
 			height,
-			math.ceil($multiStore.users[$multiStore.username].position[0] - width / 2),
-			math.ceil($multiStore.users[$multiStore.username].position[1] - height / 2),
+			math.ceil(position[0] - width / 2),
+			math.ceil(position[1] - height / 2),
 			width,
 			height
 		);
-		if (!$multiStore.users[$multiStore.username].lightOn) {
+		if (!lightOn) {
 			p5.image(
 				darkness,
 				0,
 				0,
 				width,
 				height,
-				math.ceil($multiStore.users[$multiStore.username].position[0] - width / 2),
-				math.ceil($multiStore.users[$multiStore.username].position[1] - height / 2),
+				math.ceil(position[0] - width / 2),
+				math.ceil(position[1] - height / 2),
 				width,
 				height
 			);
@@ -154,7 +168,7 @@
 				math.ceil(height / 2) - playerHeight / 2,
 				playerWidth,
 				playerHeight,
-				$multiStore.users[$multiStore.username].animationScore,
+				animationScore,
 				0,
 				playerWidth,
 				playerHeight
@@ -360,11 +374,12 @@
 	function updateStep(step: boolean, stepNumber: number, stepsAchieved: Array<boolean>) {
 		let alreadyAchieved = step;
 		let previousStepIsAchieved = stepNumber === 0 || stepsAchieved[stepNumber - 1];
-		let playerPositionIsGood = isPlayerInColor(
-			logicMap,
-			$multiStore.users[$multiStore.username].position,
-			[stepNumber * 10, stepNumber * 10, stepNumber * 10, 255]
-		);
+		let playerPositionIsGood = isPlayerInColor(logicMap, position, [
+			stepNumber * 10,
+			stepNumber * 10,
+			stepNumber * 10,
+			255
+		]);
 		return alreadyAchieved || (previousStepIsAchieved && playerPositionIsGood);
 	}
 
@@ -376,7 +391,7 @@
 			walkableMap = p5.loadImage(`levels/${$multiStore.common.level}/walkable.webp`);
 			logicMap = p5.loadImage(`levels/${$multiStore.common.level}/logic.webp`);
 			darkness = p5.loadImage(`levels/${$multiStore.common.level}/darkness.webp`);
-      beaconImage = p5.loadImage(`assets/beacon.webp`)
+			beaconImage = p5.loadImage(`assets/beacon.webp`);
 			fetch(`levels/${$multiStore.common.level}/level.json`)
 				.then((response) => response.json())
 				.then((json) => {
@@ -430,20 +445,20 @@
 			}
 			p5.createCanvas(width, height);
 			p5.frameRate(FPS);
-			$multiStore.users[$multiStore.username].lightOn = true;
+			lightOn = true;
 		};
 
 		p5.keyPressed = () => {
 			if (p5.keyCode == p5.ENTER) {
-				if (!$multiStore.users[$multiStore.username].lightOn) {
-					$multiStore.users[$multiStore.username].lightOn = true;
+				if (!lightOn) {
+					lightOn = true;
 					stepsAchieved = stepsAchieved.map((step) => false);
 				}
 			} else if (p5.keyCode == 88) {
-				if (!$multiStore.users[$multiStore.username].lightOn && !inputs.includes(true))
+				if (!lightOn && !inputs.includes(true))
 					stepsAchieved = stepsAchieved.map((step, index, array) => updateStep(step, index, array));
 			} else if (p5.keyCode == 65) {
-				if ($multiStore.users[$multiStore.username].lightOn) {
+				if (lightOn) {
 					let targetPosition = math.add(
 						math.add(position, [0, beaconVerticalOffset]) as [number, number], // fix vertical offset
 						math.multiply(getVisionVector(controlOrientation), beaconSetRange) as [number, number]
@@ -497,53 +512,30 @@
 					number
 				];
 				motion = math.round(motion);
-				motion = handleWalls(walkableMap, $multiStore.users[$multiStore.username].position, motion);
-				$multiStore.users[$multiStore.username].position = math.add(
-					$multiStore.users[$multiStore.username].position,
-					motion
-				);
+				motion = handleWalls(walkableMap, position, motion);
+				position = math.add(position, motion);
 			}
-			if (
-				isPlayerInColor(
-					logicMap,
-					$multiStore.users[$multiStore.username].position,
-					[255, 0, 0, 255]
-				)
-			) {
-				if (!$multiStore.users[$multiStore.username].victory && stepsAchieved.every((v) => v)) {
+			if (isPlayerInColor(logicMap, position, [255, 0, 0, 255])) {
+				if (!victory && stepsAchieved.every((v) => v)) {
 					stepsAchieved = stepsAchieved.map((step) => false);
-					$multiStore.users[$multiStore.username].victory = true;
+					victory = true;
+					updateMultiStore();
 				}
 			}
 
-			if (
-				isPlayerInColor(
-					logicMap,
-					$multiStore.users[$multiStore.username].position,
-					[0, 255, 0, 255]
-				)
-			)
-				$multiStore.users[$multiStore.username].lightOn = false;
-			if (
-				isPlayerInColor(
-					logicMap,
-					$multiStore.users[$multiStore.username].position,
-					[0, 0, 255, 255]
-				)
-			)
-				$multiStore.users[$multiStore.username].lightOn = true;
+			if (isPlayerInColor(logicMap, position, [0, 255, 0, 255])) lightOn = false;
+			if (isPlayerInColor(logicMap, position, [0, 0, 255, 255])) lightOn = true;
 
 			// display
 			time = time + 1;
 			display(p5);
+
+			if (!victory && time % 2 == 0) updateMultiStore();
 		};
 	};
 </script>
 
-<article
-	data-theme={$multiStore.users[$multiStore.username].lightOn ? 'light' : 'dark'}
-	class="h-screen w-screen mt-0 fixed"
->
+<article data-theme={lightOn ? 'light' : 'dark'} class="h-screen w-screen mt-0 fixed">
 	<h1 class="text-center text-7xl mt-3">The Spy Game</h1>
 	<div class="flex items-center justify-center">
 		<p class="text-lg font-bold">You need to steal this object:</p>
