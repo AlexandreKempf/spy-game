@@ -530,7 +530,7 @@
 			time = time + 1;
 			display(p5);
 
-			if (!victory && time % 2 == 0) updateMultiStore();
+			if (!victory) updateMultiStore();
 		};
 	};
 </script>

@@ -15,7 +15,7 @@
 	$: {
 		clearInterval(cyclicTimer);
 		cyclicTimer = setInterval(() => {
-			if ($multiStore.common.state == 'playerSelection') {
+			if ($multiStore.common?.state == 'playerSelection') {
 				if ($playerInfo.master) $multiStore.common = $masterInfo; // new player needs gamestate
 				$multiStore.users[$playerInfo.name] = $playerInfo; // old players need notification of new players
 			}
@@ -23,20 +23,18 @@
 	}
 </script>
 
-{#if $multiStore.common !== null}
-	{#if $multiStore.common.state == 'playerSelection'}
-		<CaracterPicker {multiStore} />
-	{:else if $multiStore.common.state == 'levelSelection'}
-		<LevelPicker {multiStore} />
-	{:else if $multiStore.common.state == 'running'}
-		{#if $multiStore.users[$multiStore.username].victory}
-			{#if $multiStore.users[$multiStore.username].multiplayerScreen}
-				<MultiplayerGame {multiStore} />
-			{:else}
-				<Victory {multiStore} />
-			{/if}
+{#if $multiStore.common?.state == 'playerSelection'}
+	<CaracterPicker {multiStore} />
+{:else if $multiStore.common?.state == 'levelSelection'}
+	<LevelPicker {multiStore} />
+{:else if $multiStore.common?.state == 'running'}
+	{#if $multiStore.users[$multiStore.username].victory}
+		{#if $multiStore.users[$multiStore.username].multiplayerScreen}
+			<MultiplayerGame {multiStore} />
 		{:else}
-			<Game {multiStore} />
+			<Victory {multiStore} />
 		{/if}
+	{:else}
+		<Game {multiStore} />
 	{/if}
 {/if}

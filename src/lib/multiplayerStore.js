@@ -7,16 +7,15 @@ const supabase = createClient(
 );
 
 function set_store_for_user(store, payload) {
-    let sender_store = payload.users[payload.username]
     store.update((receiver_store) => {
         return {
-            ...receiver_store,
-            users: { ...receiver_store.users, [payload.username]: sender_store },
-            common: (sender_store.master || receiver_store.common == null) ? payload.common : receiver_store.common
+            username: receiver_store.username,
+            users: { ...receiver_store.users, [payload.username]: payload.content },
+            common: ('common' in payload) ? payload.common : receiver_store.common
         }
-    })
+    }
+    )
 };
-
 
 export function multiplayerStore(room_name, username, content, sudo = false) {
 
@@ -31,12 +30,14 @@ export function multiplayerStore(room_name, username, content, sudo = false) {
 
 
     async function set(new_value) {
+        store.update((old_value) => new_value)
         await channel.send({
             type: 'broadcast',
             event: 'store-update',
-            payload: new_value
+            payload: sudo
+                ? { common: new_value.common, username: new_value.username, content: new_value.users[new_value.username] } :
+                { username: new_value.username, content: new_value.users[new_value.username] }
         })
-        store.update((old_value) => new_value)
     }
 
 
