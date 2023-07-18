@@ -2,8 +2,9 @@
 	import P5 from 'p5-svelte';
 	import type * as p5Type from 'p5';
 	import * as math from 'mathjs';
-	import { gameInfo, playerInfo } from './store.js';
 	import { Confetti } from 'svelte-confetti';
+
+	export let multiStore;
 
 	let winImage: p5Type.Image;
 	let player: p5Type.Image;
@@ -20,7 +21,7 @@
 
 	const sketch = (p5: p5Type) => {
 		p5.preload = () => {
-			player = p5.loadImage(`players/${$playerInfo.name}.webp`);
+			player = p5.loadImage(`players/${$multiStore.users[$multiStore.username].skin}.webp`);
 			winImage = p5.loadImage(`assets/victory.webp`);
 		};
 
@@ -61,12 +62,26 @@
 	};
 </script>
 
-<article data-theme={$gameInfo.lightOn ? 'light' : 'dark'} class="h-screen w-screen mt-0 fixed">
+<article
+	data-theme={$multiStore.users[$multiStore.username].lightOn ? 'light' : 'dark'}
+	class="h-screen w-screen mt-0 fixed"
+>
 	<h1 class="text-center text-7xl mt-3">The Spy Game</h1>
+	{#if $multiStore.users[$multiStore.username].master}
+		<button
+			class="mt-10 border-none mx-auto w-40"
+			style:background-color={$multiStore.users[$multiStore.username].color}
+			on:click={() => {
+				$multiStore.common.state = 'levelSelection';
+			}}>Try another level</button
+		>
+	{/if}
 	<button
 		class="mt-10 border-none mx-auto w-40"
-		style:background-color={$playerInfo.color}
-		on:click={() => ($gameInfo.state = 'levelSelection')}>Try another level</button
+		style:background-color={$multiStore.users[$multiStore.username].color}
+		on:click={() => {
+			$multiStore.users[$multiStore.username].multiplayerScreen = true;
+		}}>Wait for others</button
 	>
 	<div class="absolute bottom-90 left-150">
 		<Confetti x={[-1, 1]} y={[-1, 1]} delay={[0, 1000]} infinite />
