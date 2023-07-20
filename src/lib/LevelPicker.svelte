@@ -28,7 +28,8 @@
 			{#if levelName == $multiStore.common.level}
 				<div
 					style:border-color={$multiStore.users[$multiStore.username].color}
-					class="flex flex-col items-center w-40 p5 mt-2 rounded-xl border-4 border-solid"
+					class="flex flex-col items-center w-40 p5 mt-2 rounded-xl border-4 border-solid bg-white"
+					role="button"
 				>
 					<div
 						style:width="96px"
@@ -39,7 +40,7 @@
 						style:color={$multiStore.users[$multiStore.username].color}
 						class="m-1 text-lg text-#4280dd font-bold"
 					>
-						{levelName}
+						{levelName.substring(3).replaceAll('_', ' ')}
 					</p>
 				</div>
 			{:else}
@@ -56,7 +57,7 @@
 						style:background="url({`levels/${levelName}/goalObject.webp`})"
 					/>
 					<p class="m-1 text-#444 text-lg">
-						{levelName}
+						{levelName.substring(3).replaceAll('_', ' ')}
 					</p>
 				</div>
 			{/if}
@@ -80,7 +81,7 @@
 						style:color={$multiStore.users[$multiStore.username].color}
 						class="m-1 text-lg text-#4280dd font-bold"
 					>
-						{levelName}
+						{levelName.substring(3).replaceAll('_', ' ')}
 					</p>
 				</div>
 			{:else}
@@ -93,7 +94,7 @@
 						style:background="url({`levels/${levelName}/goalObject.webp`})"
 					/>
 					<p class="m-1 text-#444 text-lg">
-						{levelName}
+						{levelName.substring(3).replaceAll('_', ' ')}
 					</p>
 				</div>
 			{/if}

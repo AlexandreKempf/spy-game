@@ -5,11 +5,23 @@
 
 	export let multiStore;
 
-	let background: p5Type.Image;
-	let foreground: p5Type.Image;
-	let walkableMap: p5Type.Image;
+	function getStepsImagesPaths(level: string, filename: string): string[] {
+		return Object.keys(import.meta.glob('../../static/levels/**/**/*.webp'))
+			.filter((path) => path.includes(level) && path.includes(filename))
+			.map((path) => path.substring(12))
+			.sort();
+	}
+
+	let backgroundsPaths: string[] = getStepsImagesPaths($multiStore.common.level, 'background');
+	let foregroundsPaths: string[] = getStepsImagesPaths($multiStore.common.level, 'foreground');
+	let walkableMapsPaths: string[] = getStepsImagesPaths($multiStore.common.level, 'walkable');
+	let darknessesPaths: string[] = getStepsImagesPaths($multiStore.common.level, 'darkness');
+
+	let backgrounds: p5Type.Image[];
+	let foregrounds: p5Type.Image[];
+	let walkableMaps: p5Type.Image[];
+	let darknesses: p5Type.Image[];
 	let logicMap: p5Type.Image;
-	let darkness: p5Type.Image;
 	let nightVisionCaches: { [key: number]: p5Type.Image };
 	let player: p5Type.Image;
 	let playerContours: p5Type.Image;
@@ -47,7 +59,7 @@
 	let time: number;
 	let playerOrientation: number;
 	let controlOrientation: number;
-	let stepsAchieved: Array<boolean>;
+	let currentStepIndex: number = 0;
 	let beacons: [[number, number], number][] = [];
 
 	let position: [number, number];
@@ -62,7 +74,7 @@
 		time = 0;
 		playerOrientation = 2; // Orientation of the player icon. Even indexes only. Start down
 		controlOrientation = -1; // Orientation of the control, thus the vision vector. Starts undefined.
-		stepsAchieved = stepsImages.map((path) => false);
+		currentStepIndex = 0;
 	}
 
 	function updateMultiStore() {
@@ -82,7 +94,7 @@
 			playerWidth * (time % 6);
 		p5.background(lightOn ? 'white' : 'black');
 		p5.image(
-			background,
+			backgrounds[currentStepIndex],
 			0,
 			0,
 			width,
@@ -119,7 +131,7 @@
 			playerHeight
 		);
 		p5.image(
-			foreground,
+			foregrounds[currentStepIndex],
 			0,
 			0,
 			width,
@@ -131,7 +143,7 @@
 		);
 		if (!lightOn) {
 			p5.image(
-				darkness,
+				darknesses[currentStepIndex],
 				0,
 				0,
 				width,
@@ -181,9 +193,8 @@
 	function displayStepsIcons(p5: p5Type): void {
 		let stepsImagesOffset = 10;
 		let stepImage: p5Type.Image;
-		for (let stepIndex = 0; stepIndex < stepsAchieved.length; stepIndex++) {
-			if (!stepsAchieved[stepIndex]) break;
-			stepImage = stepsImages[stepIndex];
+		for (let stepIndex = 1; stepIndex <= currentStepIndex; stepIndex++) {
+			stepImage = stepsImages[stepIndex - 1];
 			p5.image(
 				stepImage,
 				stepsImagesOffset,
@@ -371,26 +382,24 @@
 		return true;
 	}
 
-	function updateStep(step: boolean, stepNumber: number, stepsAchieved: Array<boolean>) {
-		let alreadyAchieved = step;
-		let previousStepIsAchieved = stepNumber === 0 || stepsAchieved[stepNumber - 1];
+	function updateStep() {
 		let playerPositionIsGood = isPlayerInColor(logicMap, position, [
-			stepNumber * 10,
-			stepNumber * 10,
-			stepNumber * 10,
+			currentStepIndex * 10,
+			currentStepIndex * 10,
+			currentStepIndex * 10,
 			255
 		]);
-		return alreadyAchieved || (previousStepIsAchieved && playerPositionIsGood);
+		currentStepIndex = playerPositionIsGood ? currentStepIndex + 1 : currentStepIndex;
 	}
 
 	const sketch = (p5: p5Type) => {
 		p5.preload = () => {
-			background = p5.loadImage(`levels/${$multiStore.common.level}/background.webp`);
-			foreground = p5.loadImage(`levels/${$multiStore.common.level}/foreground.webp`);
+			backgrounds = backgroundsPaths.map((path) => p5.loadImage(path));
+			foregrounds = foregroundsPaths.map((path) => p5.loadImage(path));
+			walkableMaps = walkableMapsPaths.map((path) => p5.loadImage(path));
+			darknesses = darknessesPaths.map((path) => p5.loadImage(path));
 			player = p5.loadImage(`players/${$multiStore.users[$multiStore.username].skin}.webp`);
-			walkableMap = p5.loadImage(`levels/${$multiStore.common.level}/walkable.webp`);
 			logicMap = p5.loadImage(`levels/${$multiStore.common.level}/logic.webp`);
-			darkness = p5.loadImage(`levels/${$multiStore.common.level}/darkness.webp`);
 			beaconImage = p5.loadImage(`assets/beacon.webp`);
 			fetch(`levels/${$multiStore.common.level}/level.json`)
 				.then((response) => response.json())
@@ -417,7 +426,7 @@
 		};
 
 		p5.setup = () => {
-			walkableMap.loadPixels();
+			walkableMaps.map((walkable) => walkable.loadPixels());
 			logicMap.loadPixels();
 			player.loadPixels();
 			playerContours = extractContour(player, p5);
@@ -452,11 +461,10 @@
 			if (p5.keyCode == p5.ENTER) {
 				if (!lightOn) {
 					lightOn = true;
-					stepsAchieved = stepsAchieved.map((step) => false);
+					currentStepIndex = 0;
 				}
 			} else if (p5.keyCode == 88) {
-				if (!lightOn && !inputs.includes(true))
-					stepsAchieved = stepsAchieved.map((step, index, array) => updateStep(step, index, array));
+				if (!lightOn && !inputs.includes(true)) updateStep();
 			} else if (p5.keyCode == 65) {
 				if (lightOn) {
 					let targetPosition = math.add(
@@ -512,12 +520,12 @@
 					number
 				];
 				motion = math.round(motion);
-				motion = handleWalls(walkableMap, position, motion);
+				motion = handleWalls(walkableMaps[currentStepIndex], position, motion);
 				position = math.add(position, motion);
 			}
 			if (isPlayerInColor(logicMap, position, [255, 0, 0, 255])) {
-				if (!victory && stepsAchieved.every((v) => v)) {
-					stepsAchieved = stepsAchieved.map((step) => false);
+				if (!victory && currentStepIndex == stepsImages.length) {
+					currentStepIndex = 0;
 					victory = true;
 					updateMultiStore();
 				}

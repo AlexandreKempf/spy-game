@@ -1,0 +1,10 @@
+{
+    "stepsImages": [
+        "goalObject.webp"
+    ],
+    "initialPosition": [
+        1105,
+        1500
+    ],
+    "beacons": 0
+}

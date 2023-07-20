@@ -5,6 +5,16 @@
 
 	export let multiStore;
 
+	function getStepsImagesPaths(level: string, filename: string): string[] {
+		return Object.keys(import.meta.glob('../../static/levels/**/**/*.webp'))
+			.filter((path) => path.includes(level) && path.includes(filename))
+			.map((path) => path.substring(12))
+			.sort();
+	}
+
+	let backgroundPath: string = getStepsImagesPaths($multiStore.common.level, 'background')[0];
+	let foregroundPath: string = getStepsImagesPaths($multiStore.common.level, 'foreground')[0];
+	let walkableMapPath: string = getStepsImagesPaths($multiStore.common.level, 'walkable')[0];
 	let background: p5Type.Image;
 	let foreground: p5Type.Image;
 	let walkableMap: p5Type.Image;
@@ -210,9 +220,9 @@
 
 	const sketch = (p5: p5Type) => {
 		p5.preload = () => {
-			background = p5.loadImage(`levels/${$multiStore.common.level}/background.webp`);
-			foreground = p5.loadImage(`levels/${$multiStore.common.level}/foreground.webp`);
-			walkableMap = p5.loadImage(`levels/${$multiStore.common.level}/walkable.webp`);
+			background = p5.loadImage(backgroundPath);
+			foreground = p5.loadImage(foregroundPath);
+			walkableMap = p5.loadImage(walkableMapPath);
 			for (const [username, store] of Object.entries($multiStore.users)) {
 				players[username] = p5.loadImage(`players/${store.skin}.webp`);
 			}
@@ -290,6 +300,15 @@
 
 <article data-theme="light" class="h-screen w-screen mt-0 fixed">
 	<h1 class="text-center text-7xl mt-3">The Spy Game</h1>
+	{#if $multiStore.users[$multiStore.username].master}
+		<button
+			class="mt-10 border-none mx-auto w-40"
+			style:background-color={$multiStore.users[$multiStore.username].color}
+			on:click={() => {
+				$multiStore.common.state = 'levelSelection';
+			}}>Try another level</button
+		>
+	{/if}
 	<div class="flex items-center justify-center">
 		<img src={`levels/${$multiStore.common.level}/goalObject.webp`} alt="object to steal" />
 	</div>

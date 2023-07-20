@@ -26,7 +26,8 @@
 
 	function joinRoom() {
 		$playerInfo.name = playerName;
-		if (roomInput !== '') goto('/'.concat(roomInput));
+		console.log(roomInput);
+		if (roomInput !== '' && roomInput != null) goto('/'.concat(roomInput));
 	}
 </script>
 
@@ -37,22 +38,26 @@
 	<input bind:value={playerName} />
 </div>
 <div class="mx-30 my-10">
-	<p>Explore the museum by day, and when you're ready comes by night to steal it.</p>
+	<p>Welcome to the spy game {playerName ? playerName : 'Stanger'}!</p>
 	<p>
-		In order to steal it, enter the museum by night, then go in front of the object, stand still,
-		press "X" and then sneak back to the entrance of the museum
+		In this game you'll need to steal art pieces in a museum at night. But at night, you cannot see!
+	</p>
+	<p>Explore the museum by day, and when you're ready, steal it during the night.</p>
+	<p>
+		Follow the tutorial to get confortable with the game. Only remember that if you're stuck, you
+		can always press "Enter".
 	</p>
 </div>
 
 <div class="flex m-30 items-center">
 	<div class="mx-30">
-		<button class="w-50" on:click={createRoom}>Create a team</button>
+		<button class="w-50" on:click={createRoom}>Create a team <br />or play solo</button>
 	</div>
 	<div class="flex-1" />
 	<div class="mx-30">
 		<div class="mx-auto w-50">
 			<input class="mx-auto w-50" bind:value={roomInput} />
 		</div>
-		<button class="mx-auto w-50" on:click={joinRoom}>Join a room</button>
+		<button class="mx-auto w-50" on:click={joinRoom}>Join a team</button>
 	</div>
 </div>
